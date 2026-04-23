@@ -1,0 +1,32 @@
+# Бинарники
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+bin/
+
+# Тесты
+*.test
+*.out
+coverage.html
+
+# Зависимости
+vendor/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+deployments/.env
+.env
+
+# Логи
+*.log
