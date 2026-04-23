@@ -24,21 +24,21 @@ func NewUser(
 	id valueobject.UserID,
 	email valueobject.Email,
 	passwordHash string,
-	createdAt time.Time,
+	now time.Time,
 ) *User {
 	return &User{
 		id:           id,
 		email:        email,
 		passwordHash: passwordHash,
-		createdAt:    createdAt,
-		updatedAt:    createdAt,
+		createdAt:    now,
+		updatedAt:    now,
 		lastLogin:    nil,
 		isActive:     true,
 	}
 }
 
 // ReconstructUser reconstructs a User entity from persistence.
-// Used when loading from database.
+// Used when loading from database — no validation, trusts the data source.
 func ReconstructUser(
 	id valueobject.UserID,
 	email valueobject.Email,
@@ -94,39 +94,34 @@ func (u *User) IsActive() bool {
 	return u.isActive
 }
 
-// UpdateLastLogin updates the last login timestamp to the current time.
-func (u *User) UpdateLastLogin() {
-	now := time.Now()
+// UpdateLastLogin updates the last login timestamp.
+// Time is injected for testability — no hidden time.Now() dependency.
+func (u *User) UpdateLastLogin(now time.Time) {
 	u.lastLogin = &now
 	u.updatedAt = now
 }
 
 // SetPasswordHash updates the user's password hash.
-func (u *User) SetPasswordHash(hash string) {
+// Time is injected for testability.
+func (u *User) SetPasswordHash(hash string, now time.Time) {
 	u.passwordHash = hash
-	u.updatedAt = time.Now()
+	u.updatedAt = now
 }
 
 // Deactivate deactivates the user account.
-func (u *User) Deactivate() {
+func (u *User) Deactivate(now time.Time) {
 	u.isActive = false
-	u.updatedAt = time.Now()
+	u.updatedAt = now
 }
 
 // Activate activates the user account.
-func (u *User) Activate() {
+func (u *User) Activate(now time.Time) {
 	u.isActive = true
-	u.updatedAt = time.Now()
+	u.updatedAt = now
 }
 
 // CanLogin checks if the user can perform login.
 // Business rule: user must be active to login.
 func (u *User) CanLogin() bool {
 	return u.isActive
-}
-
-// VerifyPassword verifies if the provided password matches the stored hash.
-// This method delegates to a PasswordService for actual verification.
-func (u *User) VerifyPassword(password string, hashFunc func(string, string) (bool, error)) (bool, error) {
-	return hashFunc(password, u.passwordHash)
 }
