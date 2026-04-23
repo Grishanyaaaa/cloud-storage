@@ -7,7 +7,7 @@ import (
 )
 
 // RefreshToken represents a refresh token issued to a user.
-// Has its own lifecycle: created → active → revoked/expired.
+// Has its own lifecycle: created -> active -> revoked/expired.
 type RefreshToken struct {
 	id        valueobject.RefreshTokenID
 	userID    valueobject.UserID
