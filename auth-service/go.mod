@@ -4,6 +4,7 @@ go 1.26.2
 
 require (
 	github.com/fatih/color v1.19.0
+	github.com/google/uuid v1.6.0
 	github.com/ilyakaznacheev/cleanenv v1.5.0
 	golang.org/x/exp v0.0.0-20260410095643-746e56fc9e2f
 )
