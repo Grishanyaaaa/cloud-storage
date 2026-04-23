@@ -1,4 +1,4 @@
-package error
+package domainerr
 
 import "errors"
 
@@ -8,4 +8,12 @@ var (
 	ErrUserAlreadyExists  = errors.New("user already exists")
 	ErrUserInactive       = errors.New("user account is deactivated")
 	ErrInvalidCredentials = errors.New("invalid email or password")
+)
+
+// Token errors.
+var (
+	ErrInvalidToken         = errors.New("invalid token")
+	ErrTokenExpired         = errors.New("token expired")
+	ErrRefreshTokenNotFound = errors.New("refresh token not found")
+	ErrRefreshTokenRevoked  = errors.New("refresh token revoked")
 )
