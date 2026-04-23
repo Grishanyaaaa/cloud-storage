@@ -1,9 +1,9 @@
 package logger
 
 import (
-	"auth-service/internal/infrastructure/logger/handlers/slogpretty"
 	"os"
 
+	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/infrastructure/logger/handlers/slogpretty"
 	"golang.org/x/exp/slog"
 )
 
