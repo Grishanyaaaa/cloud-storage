@@ -7,7 +7,13 @@ import (
 )
 
 type Config struct {
-	Env string `env:"ENV" env-default:"LOCAL"`
+	Env       string `env:"ENV" env-default:"local"`
+	Server    ServerConfig
+	Postgres  PostgresConfig
+	JWT       JWTConfig
+	Security  SecurityConfig
+	CORS      CORSConfig
+	RateLimit RateLimitConfig
 }
 
 func MustLoad() *Config {
