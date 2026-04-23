@@ -3,7 +3,7 @@ package logger
 import (
 	"os"
 
-	"github.com/Grishanyaaaa/cloud-storage/auth-service/pkg/logger/handlers/slogpretty"
+	"github.com/Grishanyaaaa/cloud-storage/auth-service/pkg/common/logger/handlers/slogpretty"
 	"golang.org/x/exp/slog"
 )
 
