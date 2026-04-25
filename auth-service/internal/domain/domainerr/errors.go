@@ -17,3 +17,7 @@ var (
 	ErrRefreshTokenNotFound = errors.New("refresh token not found")
 	ErrRefreshTokenRevoked  = errors.New("refresh token revoked")
 )
+
+var (
+	ErrAuditLogNotFound = errors.New("audit log not found")
+)
