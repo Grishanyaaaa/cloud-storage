@@ -28,50 +28,11 @@ type Password struct {
 }
 
 // NewPassword creates a new Password value object with validation.
-// Returns an error if the password doesn't meet security requirements.
+// Returns the first validation error if the password doesn't meet security requirements.
 func NewPassword(password string) (Password, error) {
-	// Check length
-	if len(password) < minPasswordLength {
-		return Password{}, ErrPasswordTooShort
+	if errs := ValidatePasswordRules(password); len(errs) > 0 {
+		return Password{}, errs[0]
 	}
-	if len(password) > maxPasswordLength {
-		return Password{}, ErrPasswordTooLong
-	}
-
-	// Validate complexity
-	var (
-		hasUpper   bool
-		hasLower   bool
-		hasNumber  bool
-		hasSpecial bool
-	)
-
-	for _, char := range password {
-		switch {
-		case unicode.IsUpper(char):
-			hasUpper = true
-		case unicode.IsLower(char):
-			hasLower = true
-		case unicode.IsNumber(char):
-			hasNumber = true
-		case unicode.IsPunct(char) || unicode.IsSymbol(char):
-			hasSpecial = true
-		}
-	}
-
-	if !hasUpper {
-		return Password{}, ErrPasswordNoUppercase
-	}
-	if !hasLower {
-		return Password{}, ErrPasswordNoLowercase
-	}
-	if !hasNumber {
-		return Password{}, ErrPasswordNoNumber
-	}
-	if !hasSpecial {
-		return Password{}, ErrPasswordNoSpecial
-	}
-
 	return Password{value: password}, nil
 }
 
