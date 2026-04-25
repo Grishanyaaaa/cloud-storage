@@ -10,5 +10,4 @@ CREATE TABLE users (
                        is_active BOOLEAN DEFAULT TRUE
 );
 
-CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_users_is_active ON users(is_active);
