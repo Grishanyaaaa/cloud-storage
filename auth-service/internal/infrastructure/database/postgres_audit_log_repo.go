@@ -11,8 +11,12 @@ import (
 
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/domain/domainerr"
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/domain/entity"
+	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/domain/repository"
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/domain/valueobject"
 )
+
+// Compile-time check: AuditLogRepositoryPg implements repository.AuditLogRepository
+var _ repository.AuditLogRepository = (*AuditLogRepositoryPg)(nil)
 
 type AuditLogRepositoryPg struct {
 	pool *pgxpool.Pool
@@ -22,7 +26,7 @@ func NewAuditLogRepository(pool *pgxpool.Pool) *AuditLogRepositoryPg {
 	return &AuditLogRepositoryPg{pool: pool}
 }
 
-func (r *AuditLogRepositoryPg) Create(ctx context.Context, log *entity.AuditLog) error {
+func (r *AuditLogRepositoryPg) Save(ctx context.Context, log *entity.AuditLog) error {
 	const q = `
 		INSERT INTO audit_logs (id, user_id, action, ip_address, user_agent, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6)`
@@ -50,7 +54,7 @@ func (r *AuditLogRepositoryPg) GetByID(ctx context.Context, id valueobject.Audit
 	return r.scanLog(ctx, q, id.String())
 }
 
-func (r *AuditLogRepositoryPg) ListByUserID(ctx context.Context, userID valueobject.UserID, limit, offset int) ([]*entity.AuditLog, error) {
+func (r *AuditLogRepositoryPg) FindByUserID(ctx context.Context, userID valueobject.UserID, limit, offset int) ([]*entity.AuditLog, error) {
 	const q = `
 		SELECT id, user_id, action, ip_address, user_agent, created_at
 		FROM audit_logs
