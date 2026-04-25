@@ -1,23 +1,21 @@
 package domainerr
 
-import "errors"
-
 // User errors.
 var (
-	ErrUserNotFound       = errors.New("user not found")
-	ErrUserAlreadyExists  = errors.New("user already exists")
-	ErrUserInactive       = errors.New("user account is deactivated")
-	ErrInvalidCredentials = errors.New("invalid email or password")
+	ErrUserNotFound       = New("USER_NOT_FOUND", "user not found", nil)
+	ErrUserAlreadyExists  = New("USER_ALREADY_EXISTS", "user already exists", nil)
+	ErrUserInactive       = New("USER_INACTIVE", "user account is deactivated", nil)
+	ErrInvalidCredentials = New("INVALID_CREDENTIALS", "invalid email or password", nil)
 )
 
 // Token errors.
 var (
-	ErrInvalidToken         = errors.New("invalid token")
-	ErrTokenExpired         = errors.New("token expired")
-	ErrRefreshTokenNotFound = errors.New("refresh token not found")
-	ErrRefreshTokenRevoked  = errors.New("refresh token revoked")
+	ErrInvalidToken         = New("INVALID_TOKEN", "invalid token", nil)
+	ErrTokenExpired         = New("TOKEN_EXPIRED", "token expired", nil)
+	ErrRefreshTokenNotFound = New("REFRESH_TOKEN_NOT_FOUND", "refresh token not found", nil)
+	ErrRefreshTokenRevoked  = New("REFRESH_TOKEN_REVOKED", "refresh token revoked", nil)
 )
 
 var (
-	ErrAuditLogNotFound = errors.New("audit log not found")
+	ErrAuditLogNotFound = New("AUDIT_LOG_NOT_FOUND", "audit log not found", nil)
 )
