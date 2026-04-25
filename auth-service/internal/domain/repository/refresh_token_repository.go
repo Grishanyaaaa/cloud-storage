@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"time"
 
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/domain/entity"
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/domain/valueobject"
@@ -20,8 +21,8 @@ type RefreshTokenRepository interface {
 
 	// RevokeByID marks a specific token as revoked.
 	// Returns domainerr.ErrRefreshTokenNotFound if not exists.
-	RevokeByID(ctx context.Context, id valueobject.RefreshTokenID) error
+	RevokeByID(ctx context.Context, id valueobject.RefreshTokenID, now time.Time) error
 
 	// RevokeAllByUserID revokes all active tokens for a user (logout from all devices).
-	RevokeAllByUserID(ctx context.Context, userID valueobject.UserID) error
+	RevokeAllByUserID(ctx context.Context, userID valueobject.UserID, now time.Time) error
 }

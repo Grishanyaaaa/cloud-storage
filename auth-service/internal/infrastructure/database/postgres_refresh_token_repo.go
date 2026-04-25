@@ -57,13 +57,13 @@ func (r *RefreshTokenRepositoryPg) FindByTokenHash(ctx context.Context, tokenHas
 	return r.scanToken(ctx, q, tokenHash)
 }
 
-func (r *RefreshTokenRepositoryPg) RevokeByID(ctx context.Context, id valueobject.RefreshTokenID) error {
+func (r *RefreshTokenRepositoryPg) RevokeByID(ctx context.Context, id valueobject.RefreshTokenID, now time.Time) error {
 	const q = `
 		UPDATE refresh_tokens
-		SET revoked_at = NOW()
+		SET revoked_at = $2
 		WHERE id = $1 AND revoked_at IS NULL`
 
-	tag, err := r.pool.Exec(ctx, q, id.String())
+	tag, err := r.pool.Exec(ctx, q, id.String(), now)
 	if err != nil {
 		return fmt.Errorf("revoke refresh token: %w", err)
 	}
@@ -75,14 +75,14 @@ func (r *RefreshTokenRepositoryPg) RevokeByID(ctx context.Context, id valueobjec
 	return nil
 }
 
-func (r *RefreshTokenRepositoryPg) RevokeAllByUserID(ctx context.Context, userID valueobject.UserID) error {
+func (r *RefreshTokenRepositoryPg) RevokeAllByUserID(ctx context.Context, userID valueobject.UserID, now time.Time) error {
 	const q = `
 		UPDATE refresh_tokens
-		SET revoked_at = NOW()
+		SET revoked_at = $2
 		WHERE user_id = $1 AND revoked_at IS NULL`
 
 	// тут не проверяем RowsAffected — если токенов нет, это не ошибка
-	_, err := r.pool.Exec(ctx, q, userID.String())
+	_, err := r.pool.Exec(ctx, q, userID.String(), now)
 	if err != nil {
 		return fmt.Errorf("revoke all refresh tokens: %w", err)
 	}
