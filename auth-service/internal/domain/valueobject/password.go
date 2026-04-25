@@ -2,61 +2,51 @@ package valueobject
 
 import (
 	"errors"
+	"fmt"
 	"unicode"
 )
 
 // Password validation errors.
 var (
-	ErrPasswordTooShort    = errors.New("password must be at least 8 characters")
-	ErrPasswordTooLong     = errors.New("password must not exceed 72 characters")
 	ErrPasswordNoUppercase = errors.New("password must contain at least one uppercase letter")
 	ErrPasswordNoLowercase = errors.New("password must contain at least one lowercase letter")
 	ErrPasswordNoNumber    = errors.New("password must contain at least one number")
 	ErrPasswordNoSpecial   = errors.New("password must contain at least one special character")
 )
 
-const (
-	minPasswordLength = 8
-	maxPasswordLength = 72 // bcrypt limit
-)
+// PasswordPolicy defines the rules for password validation.
+// Created from configuration at startup, injected into use cases.
+type PasswordPolicy struct {
+	MinLength int
+	MaxLength int
+}
 
 // Password represents a plain-text password for validation.
 // This is a value object used during registration/login.
-// It should never be stored - only used for validation and hashing.
+// It should never be stored — only used for validation and hashing.
 type Password struct {
 	value string
 }
 
-// NewPassword creates a new Password value object with validation.
+// NewPassword creates a new Password value object with validation against the policy.
 // Returns the first validation error if the password doesn't meet security requirements.
-func NewPassword(password string) (Password, error) {
-	if errs := ValidatePasswordRules(password); len(errs) > 0 {
+func (p PasswordPolicy) NewPassword(password string) (Password, error) {
+	if errs := p.ValidateRules(password); len(errs) > 0 {
 		return Password{}, errs[0]
 	}
 	return Password{value: password}, nil
 }
 
-// String returns the plain-text password.
-// WARNING: This should only be used for hashing, never for storage or logging.
-func (p Password) String() string {
-	return p.value
-}
-
-// IsZero returns true if the Password is the zero value.
-func (p Password) IsZero() bool {
-	return p.value == ""
-}
-
-// ValidatePasswordRules returns all validation errors for a password.
+// ValidateRules returns all validation errors for a password.
 // Useful for providing detailed feedback to users.
-func ValidatePasswordRules(password string) []error {
+func (p PasswordPolicy) ValidateRules(password string) []error {
 	var errs []error
 
-	if len(password) < minPasswordLength {
-		errs = append(errs, ErrPasswordTooShort)
+	if len(password) < p.MinLength {
+		errs = append(errs, fmt.Errorf("password must be at least %d characters", p.MinLength))
 	}
-	if len(password) > maxPasswordLength {
-		errs = append(errs, ErrPasswordTooLong)
+	if len(password) > p.MaxLength {
+		errs = append(errs, fmt.Errorf("password must not exceed %d characters", p.MaxLength))
 	}
 
 	var hasUpper, hasLower, hasNumber, hasSpecial bool
@@ -87,4 +77,15 @@ func ValidatePasswordRules(password string) []error {
 	}
 
 	return errs
+}
+
+// String returns the plain-text password.
+// WARNING: This should only be used for hashing, never for storage or logging.
+func (p Password) String() string {
+	return p.value
+}
+
+// IsZero returns true if the Password is the zero value.
+func (p Password) IsZero() bool {
+	return p.value == ""
 }
