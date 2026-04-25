@@ -56,7 +56,7 @@ func (p PasswordPolicy) ValidateRules(password string) []error {
 			hasUpper = true
 		case unicode.IsLower(char):
 			hasLower = true
-		case unicode.IsNumber(char):
+		case unicode.IsDigit(char):
 			hasNumber = true
 		case unicode.IsPunct(char) || unicode.IsSymbol(char):
 			hasSpecial = true
