@@ -2,7 +2,7 @@ package valueobject
 
 import (
 	"errors"
-	"regexp"
+	"net/mail"
 	"strings"
 )
 
@@ -13,9 +13,6 @@ var ErrInvalidEmail = errors.New("invalid email format")
 var ErrEmailTooLong = errors.New("email exceeds maximum length")
 
 const maxEmailLength = 255
-
-// Email regex pattern - validates common email formats.
-var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
 
 // Email represents an email address value object.
 // It enforces validation invariants at creation time.
@@ -34,12 +31,13 @@ func NewEmail(email string) (Email, error) {
 		return Email{}, ErrEmailTooLong
 	}
 
-	// Validate format
-	if !emailRegex.MatchString(email) {
+	// Validate format using standard library
+	parsedAddr, err := mail.ParseAddress(email)
+	if err != nil || parsedAddr.Address != email {
 		return Email{}, ErrInvalidEmail
 	}
 
-	return Email{value: email}, nil
+	return Email{value: parsedAddr.Address}, nil
 }
 
 // String returns the email address as a string.
