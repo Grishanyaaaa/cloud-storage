@@ -64,18 +64,22 @@ func (r *RefreshTokenRepositoryPg) FindByTokenHash(ctx context.Context, tokenHas
 }
 
 func (r *RefreshTokenRepositoryPg) RevokeByID(ctx context.Context, id valueobject.RefreshTokenID, now time.Time) error {
+	// Использование COALESCE гарантирует, что если токен уже был отозван, 
+	// мы сохраним его оригинальное время отзыва (не перезапишем на now).
+	// RETURNING id позволяет понять, существует ли токен вообще, за 1 запрос.
 	const q = `
 		UPDATE refresh_tokens
-		SET revoked_at = $2
-		WHERE id = $1 AND revoked_at IS NULL`
+		SET revoked_at = COALESCE(revoked_at, $2)
+		WHERE id = $1
+		RETURNING id`
 
-	tag, err := r.pool.Exec(ctx, q, id.String(), now)
+	var returnedID string
+	err := r.pool.QueryRow(ctx, q, id.String(), now).Scan(&returnedID)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return domainerr.ErrRefreshTokenNotFound
+		}
 		return fmt.Errorf("revoke refresh token: %w", err)
-	}
-
-	if tag.RowsAffected() == 0 {
-		return domainerr.ErrRefreshTokenNotFound
 	}
 
 	return nil
