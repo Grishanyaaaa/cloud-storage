@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/netip"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -35,7 +36,7 @@ func (r *AuditLogRepositoryPg) Save(ctx context.Context, log *entity.AuditLog) e
 		log.ID().String(),
 		log.UserID().String(),
 		string(log.Action()),
-		nullableString(log.IPAddress()),
+		parseIPToInet(log.IPAddress()),
 		nullableString(log.UserAgent()),
 		log.CreatedAt(),
 	)
@@ -91,7 +92,7 @@ func (r *AuditLogRepositoryPg) scanLog(ctx context.Context, query string, args .
 		id        string
 		userID    string
 		action    string
-		ipAddress *string
+		ipAddress *netip.Prefix
 		userAgent *string
 		createdAt time.Time
 	)
@@ -112,7 +113,7 @@ func (r *AuditLogRepositoryPg) scanFromRow(rows pgx.Rows) (*entity.AuditLog, err
 		id        string
 		userID    string
 		action    string
-		ipAddress *string
+		ipAddress *netip.Prefix
 		userAgent *string
 		createdAt time.Time
 	)
@@ -127,7 +128,7 @@ func (r *AuditLogRepositoryPg) scanFromRow(rows pgx.Rows) (*entity.AuditLog, err
 // toEntity — маппинг сырых данных в доменную сущность, вынесен чтобы не дублировать
 func (r *AuditLogRepositoryPg) toEntity(
 	id, userID, action string,
-	ipAddress, userAgent *string,
+	ipAddress *netip.Prefix, userAgent *string,
 	createdAt time.Time,
 ) (*entity.AuditLog, error) {
 	logID, err := valueobject.ParseAuditLogID(id)
@@ -143,7 +144,7 @@ func (r *AuditLogRepositoryPg) toEntity(
 	return entity.ReconstructAuditLog(
 		logID, uid,
 		entity.Action(action),
-		derefString(ipAddress),
+		inetToString(ipAddress),
 		derefString(userAgent),
 		createdAt,
 	), nil
@@ -162,4 +163,26 @@ func derefString(s *string) string {
 		return ""
 	}
 	return *s
+}
+
+// parseIPToInet конвертирует строку IP-адреса в *netip.Addr для записи в INET колонку.
+// Возвращает nil для пустой строки (маппится в SQL NULL).
+func parseIPToInet(s string) *netip.Addr {
+	if s == "" {
+		return nil
+	}
+	addr, err := netip.ParseAddr(s)
+	if err != nil {
+		return nil
+	}
+	return &addr
+}
+
+// inetToString конвертирует *netip.Prefix (результат Scan из INET колонки) обратно в строку.
+// Возвращает пустую строку для nil (SQL NULL).
+func inetToString(p *netip.Prefix) string {
+	if p == nil {
+		return ""
+	}
+	return p.Addr().String()
 }

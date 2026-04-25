@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/netip"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -38,7 +39,7 @@ func (r *RefreshTokenRepositoryPg) Save(ctx context.Context, token *entity.Refre
 		token.ExpiresAt(),
 		token.CreatedAt(),
 		token.RevokedAt(),
-		nullableString(token.IPAddress()),
+		parseIPToInet(token.IPAddress()),
 		nullableString(token.UserAgent()),
 	)
 	if err != nil {
@@ -98,7 +99,7 @@ func (r *RefreshTokenRepositoryPg) scanToken(ctx context.Context, query string, 
 		expiresAt time.Time
 		createdAt time.Time
 		revokedAt *time.Time
-		ipAddress *string
+		ipAddress  *netip.Prefix
 		userAgent *string
 	)
 
@@ -127,6 +128,6 @@ func (r *RefreshTokenRepositoryPg) scanToken(ctx context.Context, query string, 
 	return entity.ReconstructRefreshToken(
 		tokenID, uid, tokenHash,
 		expiresAt, createdAt, revokedAt,
-		derefString(ipAddress), derefString(userAgent),
+		inetToString(ipAddress), derefString(userAgent),
 	), nil
 }
