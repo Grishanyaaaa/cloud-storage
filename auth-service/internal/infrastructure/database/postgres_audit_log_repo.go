@@ -32,11 +32,16 @@ func (r *AuditLogRepositoryPg) Save(ctx context.Context, log *entity.AuditLog) e
 		INSERT INTO audit_logs (id, user_id, action, ip_address, user_agent, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6)`
 
-	_, err := r.pool.Exec(ctx, q,
+	ip, err := parseIPToInet(log.IPAddress())
+	if err != nil {
+		return fmt.Errorf("invalid ip address: %w", err)
+	}
+
+	_, err = r.pool.Exec(ctx, q,
 		log.ID().String(),
 		log.UserID().String(),
 		string(log.Action()),
-		parseIPToInet(log.IPAddress()),
+		ip,
 		nullableString(log.UserAgent()),
 		log.CreatedAt(),
 	)
@@ -167,15 +172,15 @@ func derefString(s *string) string {
 
 // parseIPToInet конвертирует строку IP-адреса в *netip.Addr для записи в INET колонку.
 // Возвращает nil для пустой строки (маппится в SQL NULL).
-func parseIPToInet(s string) *netip.Addr {
+func parseIPToInet(s string) (*netip.Addr, error) {
 	if s == "" {
-		return nil
+		return nil, nil
 	}
 	addr, err := netip.ParseAddr(s)
 	if err != nil {
-		return nil
+		return nil, err
 	}
-	return &addr
+	return &addr, nil
 }
 
 // inetToString конвертирует *netip.Prefix (результат Scan из INET колонки) обратно в строку.

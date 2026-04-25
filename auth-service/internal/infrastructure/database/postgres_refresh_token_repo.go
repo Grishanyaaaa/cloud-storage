@@ -32,14 +32,19 @@ func (r *RefreshTokenRepositoryPg) Save(ctx context.Context, token *entity.Refre
 		INSERT INTO refresh_tokens (id, user_id, token_hash, expires_at, created_at, revoked_at, ip_address, user_agent)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
 
-	_, err := r.pool.Exec(ctx, q,
+	ip, err := parseIPToInet(token.IPAddress())
+	if err != nil {
+		return fmt.Errorf("invalid ip address: %w", err)
+	}
+
+	_, err = r.pool.Exec(ctx, q,
 		token.ID().String(),
 		token.UserID().String(),
 		token.TokenHash(),
 		token.ExpiresAt(),
 		token.CreatedAt(),
 		token.RevokedAt(),
-		parseIPToInet(token.IPAddress()),
+		ip,
 		nullableString(token.UserAgent()),
 	)
 	if err != nil {
