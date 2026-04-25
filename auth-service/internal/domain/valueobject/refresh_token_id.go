@@ -30,16 +30,6 @@ func ParseRefreshTokenID(s string) (RefreshTokenID, error) {
 	return RefreshTokenID{value: id}, nil
 }
 
-// MustParseRefreshTokenID parses a string into a RefreshTokenID.
-// Panics if the string is not a valid UUID.
-func MustParseRefreshTokenID(s string) RefreshTokenID {
-	id, err := ParseRefreshTokenID(s)
-	if err != nil {
-		panic(err)
-	}
-	return id
-}
-
 // String returns the string representation of the RefreshTokenID.
 func (id RefreshTokenID) String() string {
 	return id.value.String()

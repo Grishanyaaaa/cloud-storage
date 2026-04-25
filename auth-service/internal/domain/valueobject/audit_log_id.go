@@ -30,16 +30,6 @@ func ParseAuditLogID(s string) (AuditLogID, error) {
 	return AuditLogID{value: id}, nil
 }
 
-// MustParseAuditLogID parses a string into an AuditLogID.
-// Panics if the string is not a valid UUID.
-func MustParseAuditLogID(s string) AuditLogID {
-	id, err := ParseAuditLogID(s)
-	if err != nil {
-		panic(err)
-	}
-	return id
-}
-
 // String returns the string representation of AuditLogID.
 func (id AuditLogID) String() string {
 	return id.value.String()

@@ -42,16 +42,6 @@ func NewEmail(email string) (Email, error) {
 	return Email{value: email}, nil
 }
 
-// MustNewEmail creates a new Email value object.
-// Panics if the email is invalid.
-func MustNewEmail(email string) Email {
-	e, err := NewEmail(email)
-	if err != nil {
-		panic(err)
-	}
-	return e
-}
-
 // String returns the email address as a string.
 func (e Email) String() string {
 	return e.value

@@ -30,16 +30,6 @@ func ParseUserID(s string) (UserID, error) {
 	return UserID{value: id}, nil
 }
 
-// MustParseUserID parses a string into a UserID.
-// Panics if the string is not a valid UUID.
-func MustParseUserID(s string) UserID {
-	id, err := ParseUserID(s)
-	if err != nil {
-		panic(err)
-	}
-	return id
-}
-
 // String returns the string representation of the UserID.
 func (u UserID) String() string {
 	return u.value.String()
