@@ -12,10 +12,14 @@ import (
 
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/domain/domainerr"
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/domain/entity"
+	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/domain/repository"
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/domain/valueobject"
 )
 
 const uniqueViolation = "23505"
+
+// Compile-time check: UserRepositoryPg implements repository.UserRepository
+var _ repository.UserRepository = (*UserRepositoryPg)(nil)
 
 type UserRepositoryPg struct {
 	pool *pgxpool.Pool

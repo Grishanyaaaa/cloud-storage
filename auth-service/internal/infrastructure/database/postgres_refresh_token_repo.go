@@ -11,8 +11,12 @@ import (
 
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/domain/domainerr"
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/domain/entity"
+	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/domain/repository"
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/domain/valueobject"
 )
+
+// Compile-time check: RefreshTokenRepositoryPg implements repository.RefreshTokenRepository
+var _ repository.RefreshTokenRepository = (*RefreshTokenRepositoryPg)(nil)
 
 type RefreshTokenRepositoryPg struct {
 	pool *pgxpool.Pool
