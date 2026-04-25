@@ -57,8 +57,7 @@ type accessClaims struct {
 	Email  string `json:"email"`
 }
 
-func (m *JWTManager) GenerateAccessToken(claims port.TokenClaims) (string, error) {
-	now := time.Now()
+func (m *JWTManager) GenerateAccessToken(claims port.TokenClaims, now time.Time) (string, error) {
 
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, accessClaims{
 		RegisteredClaims: jwt.RegisteredClaims{

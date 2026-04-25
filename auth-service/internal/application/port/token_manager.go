@@ -13,7 +13,7 @@ type TokenPair struct {
 }
 
 type TokenManager interface {
-	GenerateAccessToken(claims TokenClaims) (string, error)
+	GenerateAccessToken(claims TokenClaims, now time.Time) (string, error)
 	GenerateRefreshToken() (string, error)
 	ParseAccessToken(token string) (*TokenClaims, error)
 	AccessTokenTTL() time.Duration
