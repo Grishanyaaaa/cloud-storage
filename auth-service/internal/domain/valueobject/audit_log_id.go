@@ -1,28 +1,61 @@
 package valueobject
 
 import (
-	"fmt"
+	"errors"
 
 	"github.com/google/uuid"
 )
 
+// ErrInvalidAuditLogID is returned when an audit log ID is invalid.
+var ErrInvalidAuditLogID = errors.New("invalid audit log ID")
+
 // AuditLogID represents a unique identifier for an audit log entry.
-type AuditLogID string
+// This is a value object that enforces the invariant of a valid UUID.
+type AuditLogID struct {
+	value uuid.UUID
+}
 
 // NewAuditLogID generates a new unique AuditLogID.
 func NewAuditLogID() AuditLogID {
-	return AuditLogID(uuid.New().String())
+	return AuditLogID{value: uuid.New()}
+}
+
+// ParseAuditLogID parses a string into an AuditLogID.
+// Returns an error if the string is not a valid UUID.
+func ParseAuditLogID(s string) (AuditLogID, error) {
+	id, err := uuid.Parse(s)
+	if err != nil {
+		return AuditLogID{}, ErrInvalidAuditLogID
+	}
+	return AuditLogID{value: id}, nil
+}
+
+// MustParseAuditLogID parses a string into an AuditLogID.
+// Panics if the string is not a valid UUID.
+func MustParseAuditLogID(s string) AuditLogID {
+	id, err := ParseAuditLogID(s)
+	if err != nil {
+		panic(err)
+	}
+	return id
 }
 
 // String returns the string representation of AuditLogID.
 func (id AuditLogID) String() string {
-	return string(id)
+	return id.value.String()
 }
 
-// ParseAuditLogID восстанавливает AuditLogID из строки с валидацией формата UUID.
-func ParseAuditLogID(raw string) (AuditLogID, error) {
-	if _, err := uuid.Parse(raw); err != nil {
-		return "", fmt.Errorf("invalid audit log id: %w", err)
-	}
-	return AuditLogID(raw), nil
+// Value returns the underlying UUID value.
+func (id AuditLogID) Value() uuid.UUID {
+	return id.value
+}
+
+// IsZero returns true if the AuditLogID is the zero value.
+func (id AuditLogID) IsZero() bool {
+	return id.value == uuid.UUID{}
+}
+
+// Equals checks if two AuditLogIDs are equal.
+func (id AuditLogID) Equals(other AuditLogID) bool {
+	return id.value == other.value
 }
