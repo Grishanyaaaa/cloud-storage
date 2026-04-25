@@ -4,7 +4,7 @@ CREATE TABLE audit_logs (
                             action VARCHAR(50) NOT NULL,
                             ip_address INET NULL,
                             user_agent TEXT NULL,
-                            created_at TIMESTAMP DEFAULT NOW()
+                            created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE INDEX idx_audit_logs_user_id ON audit_logs(user_id);
