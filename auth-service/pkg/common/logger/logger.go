@@ -3,8 +3,9 @@ package logger
 import (
 	"os"
 
+	"log/slog"
+
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/pkg/common/logger/handlers/slogpretty"
-	"golang.org/x/exp/slog"
 )
 
 const (
