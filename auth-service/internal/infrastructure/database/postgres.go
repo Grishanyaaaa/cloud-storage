@@ -10,10 +10,7 @@ import (
 )
 
 func NewPostgresPool(ctx context.Context, cfg config.PostgresConfig) (*pgxpool.Pool, error) {
-	dsn := fmt.Sprintf(
-		"postgres://%s:%s@%s:%d/%s?sslmode=%s",
-		cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.Database, cfg.SSLMode,
-	)
+	dsn := cfg.DSN()
 
 	poolCfg, err := pgxpool.ParseConfig(dsn)
 	if err != nil {
