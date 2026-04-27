@@ -31,3 +31,4 @@ deployments/.env
 # Логи
 *.log
 antigravety-agent.md
+freeclaude.sh
