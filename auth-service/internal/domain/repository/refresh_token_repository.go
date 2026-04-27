@@ -23,6 +23,11 @@ type RefreshTokenRepository interface {
 	// Returns domainerr.ErrRefreshTokenNotFound if not exists.
 	RevokeByID(ctx context.Context, id valueobject.RefreshTokenID, now time.Time) error
 
+	// RevokeByHash atomically marks a token as revoked by its hash and returns it.
+	// Returns the token state including whether it was already revoked.
+	// Returns domainerr.ErrRefreshTokenNotFound if not exists.
+	RevokeByHash(ctx context.Context, tokenHash string, now time.Time) (*entity.RefreshToken, *time.Time, error)
+
 	// RevokeAllByUserID revokes all active tokens for a user (logout from all devices).
 	RevokeAllByUserID(ctx context.Context, userID valueobject.UserID, now time.Time) error
 }

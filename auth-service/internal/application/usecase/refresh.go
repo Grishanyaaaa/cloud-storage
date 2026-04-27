@@ -16,30 +16,26 @@ import (
 func (s *AuthService) Refresh(ctx context.Context, req dto.RefreshRequest) (*dto.TokenPairResponse, error) {
 	now := time.Now()
 
-	// 1. Поиск старого токена по его хешу
+	// 1. Атомарный отзыв старого токена (Token Rotation)
+	// Это предотвращает Race Condition, когда два запроса одновременно пытаются обновить один токен.
 	tokenHash := s.tokenHasher.Hash(req.RefreshToken)
-	oldToken, err := s.tokenRepo.FindByTokenHash(ctx, tokenHash)
+	oldToken, wasRevokedAt, err := s.tokenRepo.RevokeByHash(ctx, tokenHash, now)
 	if err != nil {
 		if domainerr.IsNotFound(err) {
 			return nil, domainerr.ErrInvalidToken
 		}
-		return nil, fmt.Errorf("find refresh token: %w", err)
+		return nil, fmt.Errorf("revoke and find refresh token: %w", err)
 	}
 
-	// 2. Проверка валидности токена (срок действия и отзыв)
-	if !oldToken.IsValid(now) {
-		if oldToken.RevokedAt() != nil {
-			return nil, domainerr.ErrRefreshTokenRevoked
-		}
+	// 2. Проверка валидности (до того, как мы его отозвали сейчас)
+	if wasRevokedAt != nil {
+		return nil, domainerr.ErrRefreshTokenRevoked
+	}
+	if !oldToken.ExpiresAt().After(now) {
 		return nil, domainerr.ErrTokenExpired
 	}
 
-	// 3. Отзыв старого токена (Token Rotation)
-	if err := s.tokenRepo.RevokeByID(ctx, oldToken.ID(), now); err != nil {
-		return nil, fmt.Errorf("revoke old refresh token: %w", err)
-	}
-
-	// 4. Получение данных пользователя
+	// 3. Получение данных пользователя
 	user, err := s.userRepo.GetByID(ctx, oldToken.UserID())
 	if err != nil {
 		if domainerr.IsNotFound(err) {

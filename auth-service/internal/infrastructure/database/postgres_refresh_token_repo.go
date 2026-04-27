@@ -100,6 +100,67 @@ func (r *RefreshTokenRepositoryPg) RevokeAllByUserID(ctx context.Context, userID
 	return nil
 }
 
+func (r *RefreshTokenRepositoryPg) RevokeByHash(ctx context.Context, tokenHash string, now time.Time) (*entity.RefreshToken, *time.Time, error) {
+	// Атомарно помечаем токен как отозванный (если он еще не отозван)
+	// и возвращаем его состояние ДО обновления (was_revoked_at) и после него.
+	const q = `
+		WITH old_data AS (
+			SELECT id, revoked_at FROM refresh_tokens WHERE token_hash = $1 FOR UPDATE
+		),
+		updated AS (
+			UPDATE refresh_tokens
+			SET revoked_at = COALESCE(refresh_tokens.revoked_at, $2)
+			FROM old_data
+			WHERE refresh_tokens.id = old_data.id
+			RETURNING refresh_tokens.id, refresh_tokens.user_id, refresh_tokens.token_hash, 
+			          refresh_tokens.expires_at, refresh_tokens.created_at, refresh_tokens.revoked_at, 
+			          refresh_tokens.ip_address, refresh_tokens.user_agent, old_data.revoked_at AS was_revoked_at
+		)
+		SELECT * FROM updated`
+
+	var (
+		id           string
+		userID       string
+		hash         string
+		expiresAt    time.Time
+		createdAt    time.Time
+		revokedAt    *time.Time
+		ipAddress     *netip.Prefix
+		userAgent    *string
+		wasRevokedAt *time.Time
+	)
+
+	err := r.pool.QueryRow(ctx, q, tokenHash, now).Scan(
+		&id, &userID, &hash,
+		&expiresAt, &createdAt, &revokedAt,
+		&ipAddress, &userAgent, &wasRevokedAt,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil, domainerr.ErrRefreshTokenNotFound
+		}
+		return nil, nil, fmt.Errorf("revoke refresh token by hash: %w", err)
+	}
+
+	tokenID, err := valueobject.ParseRefreshTokenID(id)
+	if err != nil {
+		return nil, nil, fmt.Errorf("parse refresh token id: %w", err)
+	}
+
+	uid, err := valueobject.ParseUserID(userID)
+	if err != nil {
+		return nil, nil, fmt.Errorf("parse user id: %w", err)
+	}
+
+	token := entity.ReconstructRefreshToken(
+		tokenID, uid, hash,
+		expiresAt, createdAt, revokedAt,
+		inetToString(ipAddress), derefString(userAgent),
+	)
+
+	return token, wasRevokedAt, nil
+}
+
 func (r *RefreshTokenRepositoryPg) scanToken(ctx context.Context, query string, args ...any) (*entity.RefreshToken, error) {
 	var (
 		id        string
