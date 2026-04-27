@@ -1,0 +1,11 @@
+.git
+.idea
+.vscode
+vendor
+bin
+*.exe
+*.test
+audit_report.md
+antigravety-agent.md
+Dockerfile
+.dockerignore
