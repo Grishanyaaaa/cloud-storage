@@ -31,7 +31,6 @@ func New(code, message string, cause error) *DomainError {
 
 // IsNotFound checks if the error is a "NOT_FOUND" domain error.
 func IsNotFound(err error) bool {
-	var de *DomainError
 	// Используем errors.AsType (Go 1.26+) для проверки
 	if de, ok := errors.AsType[*DomainError](err); ok {
 		return de.Code == "USER_NOT_FOUND" || de.Code == "REFRESH_TOKEN_NOT_FOUND" || de.Code == "AUDIT_LOG_NOT_FOUND"
