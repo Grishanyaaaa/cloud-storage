@@ -1,6 +1,3 @@
-include deployments/.env
-export
-
 APP_NAME := auth-service
 CMD_PATH := cmd/auth-service/main.go
 
