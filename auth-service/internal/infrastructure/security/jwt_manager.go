@@ -1,10 +1,9 @@
 package security
 
 import (
+	"crypto/ed25519"
 	"crypto/rand"
-	"crypto/rsa"
 	"encoding/base64"
-	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 	"time"
@@ -15,8 +14,8 @@ import (
 )
 
 type JWTManager struct {
-	privateKey      *rsa.PrivateKey
-	publicKey       *rsa.PublicKey
+	privateKey      ed25519.PrivateKey
+	publicKey       ed25519.PublicKey
 	accessTokenTTL  time.Duration
 	refreshTokenTTL time.Duration
 	issuer          string
@@ -28,19 +27,31 @@ func NewJWTManager(cfg config.JWTConfig) (*JWTManager, error) {
 		return nil, fmt.Errorf("private key is required (JWT_PRIVATE_KEY)")
 	}
 
-	privKey, err := jwt.ParseRSAPrivateKeyFromPEM([]byte(cfg.PrivateKey))
+	// Декодируем seed из Base64
+	seed, err := base64.StdEncoding.DecodeString(cfg.PrivateKey)
 	if err != nil {
-		return nil, fmt.Errorf("parse private key: %w", err)
+		return nil, fmt.Errorf("decode private key seed: %w", err)
 	}
+	if len(seed) != ed25519.SeedSize {
+		return nil, fmt.Errorf("invalid private key seed size: expected %d, got %d", ed25519.SeedSize, len(seed))
+	}
+
+	privKey := ed25519.NewKeyFromSeed(seed)
 
 	if cfg.PublicKey == "" {
 		return nil, fmt.Errorf("public key is required (JWT_PUBLIC_KEY)")
 	}
 
-	pubKey, err := jwt.ParseRSAPublicKeyFromPEM([]byte(cfg.PublicKey))
+	// Декодируем публичный ключ из Base64
+	pubKeyBytes, err := base64.StdEncoding.DecodeString(cfg.PublicKey)
 	if err != nil {
-		return nil, fmt.Errorf("parse public key: %w", err)
+		return nil, fmt.Errorf("decode public key: %w", err)
 	}
+	if len(pubKeyBytes) != ed25519.PublicKeySize {
+		return nil, fmt.Errorf("invalid public key size: expected %d, got %d", ed25519.PublicKeySize, len(pubKeyBytes))
+	}
+
+	pubKey := ed25519.PublicKey(pubKeyBytes)
 
 	return &JWTManager{
 		privateKey:      privKey,
@@ -60,7 +71,7 @@ type accessClaims struct {
 
 func (m *JWTManager) GenerateAccessToken(claims port.TokenClaims, now time.Time) (string, error) {
 
-	token := jwt.NewWithClaims(jwt.SigningMethodRS256, accessClaims{
+	token := jwt.NewWithClaims(jwt.SigningMethodEdDSA, accessClaims{
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    m.issuer,
 			Audience:  jwt.ClaimStrings{m.audience},
@@ -71,7 +82,7 @@ func (m *JWTManager) GenerateAccessToken(claims port.TokenClaims, now time.Time)
 		Email:  claims.Email,
 	})
 
-	// подписываем приватным ключом  только auth-service может выпускать токены
+	// подписываем приватным ключом Ed25519
 	return token.SignedString(m.privateKey)
 }
 
@@ -87,10 +98,9 @@ func (m *JWTManager) GenerateRefreshToken() (string, error) {
 
 func (m *JWTManager) ParseAccessToken(tokenString string) (*port.TokenClaims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &accessClaims{}, func(t *jwt.Token) (interface{}, error) {
-		if _, ok := t.Method.(*jwt.SigningMethodRSA); !ok {
+		if _, ok := t.Method.(*jwt.SigningMethodEd25519); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
 		}
-		// валидируем публичным ключом — любой сервис с публичным ключом может проверить токен
 		return m.publicKey, nil
 	},
 		jwt.WithIssuer(m.issuer),
@@ -120,25 +130,14 @@ func (m *JWTManager) RefreshTokenTTL() time.Duration {
 }
 
 func (m *JWTManager) GetJWKS() (interface{}, error) {
-	// Для RS256 нам нужны модули (n) и экспонента (e) в base64-url кодировке
-	n := m.publicKey.N
-	// Кодируем экспоненту (e) согласно RFC 7518: Base64urlUInt без ведущих нулей
-	e := m.publicKey.E
-	eb := make([]byte, 4)
-	binary.BigEndian.PutUint32(eb, uint32(e))
-	// Убираем ведущие нули
-	i := 0
-	for i < len(eb) && eb[i] == 0 {
-		i++
-	}
-
+	// Для Ed25519 (EdDSA) формат JWK — OKP (Octet Key Pair)
 	jwk := map[string]interface{}{
-		"kty": "RSA",
+		"kty": "OKP",
 		"use": "sig",
-		"alg": "RS256",
+		"alg": "EdDSA",
+		"crv": "Ed25519",
 		"kid": "main",
-		"n":   base64.RawURLEncoding.EncodeToString(n.Bytes()),
-		"e":   base64.RawURLEncoding.EncodeToString(eb[i:]),
+		"x":   base64.RawURLEncoding.EncodeToString(m.publicKey),
 	}
 
 	return map[string]interface{}{
