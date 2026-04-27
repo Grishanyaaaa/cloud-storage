@@ -3,6 +3,7 @@ package security
 import (
 	"crypto/rand"
 	"crypto/rsa"
+	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"os"
@@ -116,4 +117,24 @@ func (m *JWTManager) AccessTokenTTL() time.Duration {
 
 func (m *JWTManager) RefreshTokenTTL() time.Duration {
 	return m.refreshTokenTTL
+}
+
+func (m *JWTManager) GetJWKS() (interface{}, error) {
+	// Для RS256 нам нужны модули (n) и экспонента (e) в base64-url кодировке
+	n := m.publicKey.N
+	e := m.publicKey.E
+
+	// Формируем структуру JWKS согласно RFC 7517
+	jwk := map[string]interface{}{
+		"kty": "RSA",
+		"use": "sig",
+		"alg": "RS256",
+		"kid": "main", // В идеале kid должен быть хешем ключа
+		"n":   base64.RawURLEncoding.EncodeToString(n.Bytes()),
+		"e":   base64.RawURLEncoding.EncodeToString([]byte{byte(e >> 16), byte(e >> 8), byte(e)}),
+	}
+
+	return map[string]interface{}{
+		"keys": []interface{}{jwk},
+	}, nil
 }
