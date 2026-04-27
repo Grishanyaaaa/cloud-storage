@@ -4,9 +4,9 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/base64"
+	"encoding/binary"
 	"encoding/hex"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/application/port"
@@ -24,20 +24,20 @@ type JWTManager struct {
 }
 
 func NewJWTManager(cfg config.JWTConfig) (*JWTManager, error) {
-	privBytes, err := os.ReadFile(cfg.PrivateKeyPath)
-	if err != nil {
-		return nil, fmt.Errorf("read private key: %w", err)
+	if cfg.PrivateKey == "" {
+		return nil, fmt.Errorf("private key is required (JWT_PRIVATE_KEY)")
 	}
-	privKey, err := jwt.ParseRSAPrivateKeyFromPEM(privBytes)
+
+	privKey, err := jwt.ParseRSAPrivateKeyFromPEM([]byte(cfg.PrivateKey))
 	if err != nil {
 		return nil, fmt.Errorf("parse private key: %w", err)
 	}
 
-	pubBytes, err := os.ReadFile(cfg.PublicKeyPath)
-	if err != nil {
-		return nil, fmt.Errorf("read public key: %w", err)
+	if cfg.PublicKey == "" {
+		return nil, fmt.Errorf("public key is required (JWT_PUBLIC_KEY)")
 	}
-	pubKey, err := jwt.ParseRSAPublicKeyFromPEM(pubBytes)
+
+	pubKey, err := jwt.ParseRSAPublicKeyFromPEM([]byte(cfg.PublicKey))
 	if err != nil {
 		return nil, fmt.Errorf("parse public key: %w", err)
 	}
@@ -122,16 +122,23 @@ func (m *JWTManager) RefreshTokenTTL() time.Duration {
 func (m *JWTManager) GetJWKS() (interface{}, error) {
 	// Для RS256 нам нужны модули (n) и экспонента (e) в base64-url кодировке
 	n := m.publicKey.N
+	// Кодируем экспоненту (e) согласно RFC 7518: Base64urlUInt без ведущих нулей
 	e := m.publicKey.E
+	eb := make([]byte, 4)
+	binary.BigEndian.PutUint32(eb, uint32(e))
+	// Убираем ведущие нули
+	i := 0
+	for i < len(eb) && eb[i] == 0 {
+		i++
+	}
 
-	// Формируем структуру JWKS согласно RFC 7517
 	jwk := map[string]interface{}{
 		"kty": "RSA",
 		"use": "sig",
 		"alg": "RS256",
-		"kid": "main", // В идеале kid должен быть хешем ключа
+		"kid": "main",
 		"n":   base64.RawURLEncoding.EncodeToString(n.Bytes()),
-		"e":   base64.RawURLEncoding.EncodeToString([]byte{byte(e >> 16), byte(e >> 8), byte(e)}),
+		"e":   base64.RawURLEncoding.EncodeToString(eb[i:]),
 	}
 
 	return map[string]interface{}{
