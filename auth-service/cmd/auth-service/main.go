@@ -51,7 +51,10 @@ func main() {
 	tokenRepo := database.NewRefreshTokenRepository(pool)
 	auditRepo := database.NewAuditLogRepository(pool)
 
-	// 6. Инициализация юзкейсов (Application layer)
+	// 6. Инициализация политики паролей
+	passwordPolicy := security.NewPasswordPolicy(cfg.Security)
+
+	// 7. Инициализация юзкейсов (Application layer)
 	authUseCase := usecase.NewAuthService(
 		userRepo,
 		tokenRepo,
@@ -59,14 +62,15 @@ func main() {
 		passwordHasher,
 		tokenManager,
 		tokenHasher,
+		passwordPolicy,
 	)
 
-	// 7. Инициализация презентации (HTTP)
+	// 8. Инициализация презентации (HTTP)
 	authHandler := handler.NewAuthHandler(authUseCase, tokenManager)
 	router := httpserver.NewRouter(authHandler)
 	srv := httpserver.NewServer(cfg.Server, router)
 
-	// 8. Запуск сервера
+	// 9. Запуск сервера
 	go func() {
 		log.Info("server started", slog.Int("port", cfg.Server.Port))
 		if err := srv.Start(); err != nil && !errors.Is(err, http.ErrServerClosed) {

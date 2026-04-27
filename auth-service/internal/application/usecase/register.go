@@ -19,7 +19,13 @@ func (s *AuthService) Register(ctx context.Context, req dto.RegisterRequest) (*d
 		return nil, fmt.Errorf("invalid email: %w", err)
 	}
 
-	// 2. Проверка существования пользователя
+	// 2. Валидация пароля через политику безопасности
+	password, err := s.passwordPolicy.NewPassword(req.Password)
+	if err != nil {
+		return nil, fmt.Errorf("invalid password: %w", err)
+	}
+
+	// 3. Проверка существования пользователя
 	exists, err := s.userRepo.ExistsByEmail(ctx, email)
 	if err != nil {
 		return nil, fmt.Errorf("check user existence: %w", err)
@@ -28,24 +34,23 @@ func (s *AuthService) Register(ctx context.Context, req dto.RegisterRequest) (*d
 		return nil, domainerr.ErrUserAlreadyExists
 	}
 
-	// 3. Хеширование пароля
-	// Мы передаем сырой пароль в hasher, который инкапсулирует алгоритм (например, bcrypt)
-	hashedPassword, err := s.hasher.Hash(req.Password)
+	// 4. Хеширование пароля
+	hashedPassword, err := s.hasher.Hash(password.String())
 	if err != nil {
 		return nil, fmt.Errorf("hash password: %w", err)
 	}
 
-	// 4. Создание новой сущности пользователя
+	// 5. Создание новой сущности пользователя
 	now := time.Now()
 	userID := valueobject.NewUserID()
 	user := entity.NewUser(userID, email, hashedPassword, now)
 
-	// 5. Сохранение в репозитории
+	// 6. Сохранение в репозитории
 	if err := s.userRepo.Create(ctx, user); err != nil {
 		return nil, fmt.Errorf("create user: %w", err)
 	}
 
-	// 6. Создание записи в логе аудита
+	// 7. Создание записи в логе аудита
 	auditLog := entity.NewAuditLog(
 		valueobject.NewAuditLogID(),
 		userID,
