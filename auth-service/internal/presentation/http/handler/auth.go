@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"net"
 	"net/http"
 
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/application/dto"
@@ -27,7 +28,11 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	req.IPAddress = r.RemoteAddr
+	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
+		req.IPAddress = host
+	} else {
+		req.IPAddress = r.RemoteAddr
+	}
 	req.UserAgent = r.UserAgent()
 
 	resp, err := h.useCase.Register(r.Context(), req)
@@ -46,7 +51,11 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	req.IPAddress = r.RemoteAddr
+	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
+		req.IPAddress = host
+	} else {
+		req.IPAddress = r.RemoteAddr
+	}
 	req.UserAgent = r.UserAgent()
 
 	resp, err := h.useCase.Login(r.Context(), req)
@@ -65,7 +74,11 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	req.IPAddress = r.RemoteAddr
+	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
+		req.IPAddress = host
+	} else {
+		req.IPAddress = r.RemoteAddr
+	}
 	req.UserAgent = r.UserAgent()
 
 	resp, err := h.useCase.Refresh(r.Context(), req)
@@ -84,7 +97,11 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	req.IPAddress = r.RemoteAddr
+	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
+		req.IPAddress = host
+	} else {
+		req.IPAddress = r.RemoteAddr
+	}
 	req.UserAgent = r.UserAgent()
 
 	if err := h.useCase.Logout(r.Context(), req); err != nil {
