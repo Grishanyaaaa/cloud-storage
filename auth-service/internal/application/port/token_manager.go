@@ -18,4 +18,5 @@ type TokenManager interface {
 	ParseAccessToken(token string) (*TokenClaims, error)
 	AccessTokenTTL() time.Duration
 	RefreshTokenTTL() time.Duration
+	GetJWKS() (interface{}, error)
 }
