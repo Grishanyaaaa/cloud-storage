@@ -28,6 +28,11 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := req.Validate(); err != nil {
+		SendError(w, err)
+		return
+	}
+
 	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
 		req.IPAddress = host
 	} else {
@@ -48,6 +53,11 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var req dto.LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if err := req.Validate(); err != nil {
+		SendError(w, err)
 		return
 	}
 
@@ -74,6 +84,11 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := req.Validate(); err != nil {
+		SendError(w, err)
+		return
+	}
+
 	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
 		req.IPAddress = host
 	} else {
@@ -94,6 +109,11 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	var req dto.LogoutRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if err := req.Validate(); err != nil {
+		SendError(w, err)
 		return
 	}
 

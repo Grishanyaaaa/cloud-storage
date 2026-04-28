@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/application/dto"
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/domain/domainerr"
 )
 
@@ -44,6 +45,11 @@ func SendError(w http.ResponseWriter, err error) {
 		message = err.Error()
 	} else if errors.Is(err, domainerr.ErrUserInactive) {
 		code = http.StatusForbidden
+		message = err.Error()
+	} else if errors.Is(err, dto.ErrEmailRequired) ||
+		errors.Is(err, dto.ErrPasswordRequired) ||
+		errors.Is(err, dto.ErrRefreshTokenRequired) {
+		code = http.StatusBadRequest
 		message = err.Error()
 	}
 
