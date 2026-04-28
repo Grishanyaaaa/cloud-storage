@@ -33,7 +33,10 @@ func SendError(w http.ResponseWriter, err error) {
 	if domainerr.IsNotFound(err) {
 		code = http.StatusNotFound
 		message = err.Error()
-	} else if errors.Is(err, domainerr.ErrInvalidCredentials) || errors.Is(err, domainerr.ErrInvalidToken) {
+	} else if errors.Is(err, domainerr.ErrInvalidCredentials) ||
+		errors.Is(err, domainerr.ErrInvalidToken) ||
+		errors.Is(err, domainerr.ErrTokenExpired) ||
+		errors.Is(err, domainerr.ErrRefreshTokenRevoked) {
 		code = http.StatusUnauthorized
 		message = err.Error()
 	} else if errors.Is(err, domainerr.ErrUserAlreadyExists) {
