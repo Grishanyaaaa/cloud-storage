@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"net/url"
 	"time"
 )
 
@@ -21,6 +22,15 @@ type PostgresConfig struct {
 func (c *PostgresConfig) DSN() string {
 	return fmt.Sprintf(
 		"postgres://%s:%s@%s:%d/%s?sslmode=%s",
-		c.User, c.Password, c.Host, c.Port, c.Database, c.SSLMode,
+		c.User, url.QueryEscape(c.Password), c.Host, c.Port, c.Database, c.SSLMode,
+	)
+}
+
+// String returns a safe representation of PostgresConfig with masked password.
+// Used for logging to prevent password leakage.
+func (c PostgresConfig) String() string {
+	return fmt.Sprintf(
+		"PostgresConfig{Host:%s Port:%d User:%s Database:%s SSLMode:%s MaxOpenConns:%d MaxIdleConns:%d}",
+		c.Host, c.Port, c.User, c.Database, c.SSLMode, c.MaxOpenConns, c.MaxIdleConns,
 	)
 }
