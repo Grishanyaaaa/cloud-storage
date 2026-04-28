@@ -30,4 +30,8 @@ type RefreshTokenRepository interface {
 
 	// RevokeAllByUserID revokes all active tokens for a user (logout from all devices).
 	RevokeAllByUserID(ctx context.Context, userID valueobject.UserID, now time.Time) error
+
+	// DeleteExpired removes all tokens that expired before the given time.
+	// Used for periodic cleanup to prevent table bloat.
+	DeleteExpired(ctx context.Context, before time.Time) (int64, error)
 }

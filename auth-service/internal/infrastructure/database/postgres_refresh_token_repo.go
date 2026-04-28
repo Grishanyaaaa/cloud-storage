@@ -100,6 +100,19 @@ func (r *RefreshTokenRepositoryPg) RevokeAllByUserID(ctx context.Context, userID
 	return nil
 }
 
+func (r *RefreshTokenRepositoryPg) DeleteExpired(ctx context.Context, before time.Time) (int64, error) {
+	const q = `
+		DELETE FROM refresh_tokens
+		WHERE expires_at < $1`
+
+	tag, err := r.pool.Exec(ctx, q, before)
+	if err != nil {
+		return 0, fmt.Errorf("delete expired refresh tokens: %w", err)
+	}
+
+	return tag.RowsAffected(), nil
+}
+
 func (r *RefreshTokenRepositoryPg) RevokeByHash(ctx context.Context, tokenHash string, now time.Time) (*entity.RefreshToken, *time.Time, error) {
 	// Атомарно помечаем токен как отозванный (если он еще не отозван)
 	// и возвращаем его состояние ДО обновления (was_revoked_at) и после него.
