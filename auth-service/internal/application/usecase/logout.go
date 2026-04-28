@@ -40,7 +40,9 @@ func (s *AuthService) Logout(ctx context.Context, req dto.LogoutRequest) error {
 		req.UserAgent,
 		now,
 	)
-	_ = s.auditRepo.Save(ctx, auditLog)
+	if err := s.auditRepo.Save(ctx, auditLog); err != nil {
+		s.logger.Error("failed to save audit log", "error", err, "user_id", token.UserID().String(), "action", entity.ActionLogout)
+	}
 
 	return nil
 }

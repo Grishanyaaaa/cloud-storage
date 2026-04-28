@@ -60,9 +60,7 @@ func (s *AuthService) Register(ctx context.Context, req dto.RegisterRequest) (*d
 		now,
 	)
 	if err := s.auditRepo.Save(ctx, auditLog); err != nil {
-		// Мы не прерываем регистрацию, если лог аудита не сохранился,
-		// но стоит хотя бы залогировать ошибку.
-		// log.Error("failed to create audit log", err)
+		s.logger.Error("failed to save audit log", "error", err, "user_id", userID.String(), "action", entity.ActionRegister)
 	}
 
 	return &dto.RegisterResponse{

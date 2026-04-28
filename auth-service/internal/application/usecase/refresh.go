@@ -91,7 +91,9 @@ func (s *AuthService) Refresh(ctx context.Context, req dto.RefreshRequest) (*dto
 		req.UserAgent,
 		now,
 	)
-	_ = s.auditRepo.Save(ctx, auditLog)
+	if err := s.auditRepo.Save(ctx, auditLog); err != nil {
+		s.logger.Error("failed to save audit log", "error", err, "user_id", user.ID().String(), "action", entity.ActionRefresh)
+	}
 
 	return &dto.TokenPairResponse{
 		AccessToken:  accessToken,

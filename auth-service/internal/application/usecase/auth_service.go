@@ -1,6 +1,8 @@
 package usecase
 
 import (
+	"log/slog"
+
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/application/port"
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/domain/repository"
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/domain/valueobject"
@@ -16,6 +18,7 @@ type AuthService struct {
 	tokenManager   port.TokenManager
 	tokenHasher    port.TokenHasher
 	passwordPolicy valueobject.PasswordPolicy
+	logger         *slog.Logger
 }
 
 // NewAuthService creates a new instance of AuthService.
@@ -27,6 +30,7 @@ func NewAuthService(
 	tokenManager port.TokenManager,
 	tokenHasher port.TokenHasher,
 	passwordPolicy valueobject.PasswordPolicy,
+	logger *slog.Logger,
 ) *AuthService {
 	return &AuthService{
 		userRepo:       userRepo,
@@ -36,5 +40,6 @@ func NewAuthService(
 		tokenManager:   tokenManager,
 		tokenHasher:    tokenHasher,
 		passwordPolicy: passwordPolicy,
+		logger:         logger,
 	}
 }

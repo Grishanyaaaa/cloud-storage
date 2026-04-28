@@ -93,7 +93,9 @@ func (s *AuthService) Login(ctx context.Context, req dto.LoginRequest) (*dto.Tok
 		req.UserAgent,
 		now,
 	)
-	_ = s.auditRepo.Save(ctx, auditLog)
+	if err := s.auditRepo.Save(ctx, auditLog); err != nil {
+		s.logger.Error("failed to save audit log", "error", err, "user_id", user.ID().String(), "action", entity.ActionLogin)
+	}
 
 	return &dto.TokenPairResponse{
 		AccessToken:  accessToken,
