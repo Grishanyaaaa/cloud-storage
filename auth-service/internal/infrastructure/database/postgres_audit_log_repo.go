@@ -170,9 +170,10 @@ func derefString(s *string) string {
 	return *s
 }
 
-// parseIPToInet конвертирует строку IP-адреса в *netip.Addr для записи в INET колонку.
+// parseIPToInet конвертирует строку IP-адреса в *netip.Prefix для записи в INET колонку.
 // Возвращает nil для пустой строки (маппится в SQL NULL).
-func parseIPToInet(s string) (*netip.Addr, error) {
+// Использует /32 для IPv4 и /128 для IPv6 для совместимости с тем, как pgx сканирует INET.
+func parseIPToInet(s string) (*netip.Prefix, error) {
 	if s == "" {
 		return nil, nil
 	}
@@ -180,7 +181,15 @@ func parseIPToInet(s string) (*netip.Addr, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &addr, nil
+
+	// Конвертируем в Prefix с полной маской для консистентности с pgx scan
+	var prefix netip.Prefix
+	if addr.Is4() {
+		prefix = netip.PrefixFrom(addr, 32)
+	} else {
+		prefix = netip.PrefixFrom(addr, 128)
+	}
+	return &prefix, nil
 }
 
 // inetToString конвертирует *netip.Prefix (результат Scan из INET колонки) обратно в строку.
