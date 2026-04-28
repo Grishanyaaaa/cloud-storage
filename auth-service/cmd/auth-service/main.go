@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/application/usecase"
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/infrastructure/config"
