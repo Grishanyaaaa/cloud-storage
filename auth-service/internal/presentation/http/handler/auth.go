@@ -38,7 +38,14 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	} else {
 		req.IPAddress = r.RemoteAddr
 	}
+	if req.IPAddress == "" {
+		req.IPAddress = "unknown"
+	}
+
 	req.UserAgent = r.UserAgent()
+	if req.UserAgent == "" {
+		req.UserAgent = "unknown"
+	}
 
 	resp, err := h.useCase.Register(r.Context(), req)
 	if err != nil {
@@ -66,7 +73,14 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	} else {
 		req.IPAddress = r.RemoteAddr
 	}
+	if req.IPAddress == "" {
+		req.IPAddress = "unknown"
+	}
+
 	req.UserAgent = r.UserAgent()
+	if req.UserAgent == "" {
+		req.UserAgent = "unknown"
+	}
 
 	resp, err := h.useCase.Login(r.Context(), req)
 	if err != nil {
@@ -94,7 +108,14 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 	} else {
 		req.IPAddress = r.RemoteAddr
 	}
+	if req.IPAddress == "" {
+		req.IPAddress = "unknown"
+	}
+
 	req.UserAgent = r.UserAgent()
+	if req.UserAgent == "" {
+		req.UserAgent = "unknown"
+	}
 
 	resp, err := h.useCase.Refresh(r.Context(), req)
 	if err != nil {
@@ -122,14 +143,22 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	} else {
 		req.IPAddress = r.RemoteAddr
 	}
+	if req.IPAddress == "" {
+		req.IPAddress = "unknown"
+	}
+
 	req.UserAgent = r.UserAgent()
+	if req.UserAgent == "" {
+		req.UserAgent = "unknown"
+	}
 
 	if err := h.useCase.Logout(r.Context(), req); err != nil {
 		SendError(w, err)
 		return
 	}
 
-	SendSuccess(w, nil, http.StatusNoContent)
+	// HTTP 204 No Content должен возвращаться без body
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *AuthHandler) GetJWKS(w http.ResponseWriter, r *http.Request) {

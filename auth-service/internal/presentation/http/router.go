@@ -4,16 +4,19 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
+	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/infrastructure/config"
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/presentation/http/handler"
+	custommiddleware "github.com/Grishanyaaaa/cloud-storage/auth-service/internal/presentation/http/middleware"
 )
 
-func NewRouter(authHandler *handler.AuthHandler) *chi.Mux {
+func NewRouter(authHandler *handler.AuthHandler, corsConfig config.CORSConfig) *chi.Mux {
 	r := chi.NewRouter()
 
 	// Базовые мидлвари
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.CleanPath)
+	r.Use(custommiddleware.CORS(corsConfig))
 
 	// Эндпоинты аутентификации
 	r.Route("/auth", func(r chi.Router) {

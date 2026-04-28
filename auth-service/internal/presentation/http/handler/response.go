@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/application/dto"
@@ -18,10 +19,12 @@ type Response struct {
 func SendSuccess(w http.ResponseWriter, data interface{}, code int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
-	_ = json.NewEncoder(w).Encode(Response{
+	if err := json.NewEncoder(w).Encode(Response{
 		Status: "success",
 		Data:   data,
-	})
+	}); err != nil {
+		slog.Error("failed to encode success response", "error", err)
+	}
 }
 
 func SendError(w http.ResponseWriter, err error) {
@@ -51,11 +54,16 @@ func SendError(w http.ResponseWriter, err error) {
 		errors.Is(err, dto.ErrRefreshTokenRequired) {
 		code = http.StatusBadRequest
 		message = err.Error()
+	} else {
+		// Логируем неизвестные ошибки для отладки
+		slog.Error("unhandled error in handler", "error", err)
 	}
 
 	w.WriteHeader(code)
-	_ = json.NewEncoder(w).Encode(Response{
+	if err := json.NewEncoder(w).Encode(Response{
 		Status: "error",
 		Error:  message,
-	})
+	}); err != nil {
+		slog.Error("failed to encode error response", "error", err)
+	}
 }

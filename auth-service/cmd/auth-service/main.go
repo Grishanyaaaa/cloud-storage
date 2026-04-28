@@ -29,8 +29,11 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	// 3. Подключение к БД
-	pool, err := database.NewPostgresPool(ctx, cfg.Postgres)
+	// 3. Подключение к БД с timeout
+	dbCtx, dbCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer dbCancel()
+
+	pool, err := database.NewPostgresPool(dbCtx, cfg.Postgres)
 	if err != nil {
 		log.Error("failed to connect to postgres", "error", err)
 		os.Exit(1)
@@ -68,7 +71,7 @@ func main() {
 
 	// 8. Инициализация презентации (HTTP)
 	authHandler := handler.NewAuthHandler(authUseCase, tokenManager)
-	router := httpserver.NewRouter(authHandler)
+	router := httpserver.NewRouter(authHandler, cfg.CORS)
 	srv := httpserver.NewServer(cfg.Server, router)
 
 	// 9. Запуск сервера
@@ -77,6 +80,26 @@ func main() {
 		if err := srv.Start(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Error("server failed", "error", err)
 			os.Exit(1)
+		}
+	}()
+
+	// 10. Запуск периодической очистки истекших токенов (каждые 24 часа)
+	cleanupTicker := time.NewTicker(24 * time.Hour)
+	defer cleanupTicker.Stop()
+
+	go func() {
+		for {
+			select {
+			case <-cleanupTicker.C:
+				deleted, err := authUseCase.CleanupExpiredTokens(context.Background(), log)
+				if err != nil {
+					log.Error("failed to cleanup expired tokens", "error", err)
+				} else if deleted > 0 {
+					log.Info("cleaned up expired tokens", slog.Int64("count", deleted))
+				}
+			case <-ctx.Done():
+				return
+			}
 		}
 	}()
 
