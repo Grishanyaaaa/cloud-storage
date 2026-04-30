@@ -14,10 +14,11 @@ import (
 
 // Login handles user authentication and issues tokens.
 func (s *AuthService) Login(ctx context.Context, req dto.LoginRequest) (*dto.TokenPairResponse, error) {
-	// 1. Валидация email
+	// 1. Поиск пользователя по email (без предварительной валидации для защиты от timing attack)
 	email, err := valueobject.NewEmail(req.Email)
 	if err != nil {
-		return nil, domainerr.ErrInvalidCredentials // Маскируем ошибки валидации для безопасности
+		// Валидация не прошла, но возвращаем generic ошибку без раскрытия деталей
+		return nil, domainerr.ErrInvalidCredentials
 	}
 
 	// 2. Поиск пользователя
