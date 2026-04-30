@@ -127,5 +127,5 @@ func main() {
 		log.Error("server forced to shutdown", "error", err)
 	}
 
-	log.Info("server stopped gracefully")
+	log.Info("server stopped")
 }
