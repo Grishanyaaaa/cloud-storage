@@ -92,7 +92,7 @@ func main() {
 		for {
 			select {
 			case <-cleanupTicker.C:
-				deleted, err := authUseCase.CleanupExpiredTokens(context.Background(), log)
+				deleted, err := authUseCase.CleanupExpiredTokens(ctx, log)
 				if err != nil {
 					log.Error("failed to cleanup expired tokens", "error", err)
 				} else if deleted > 0 {
