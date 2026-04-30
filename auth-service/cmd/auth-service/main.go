@@ -94,7 +94,6 @@ func main() {
 	wg.Add(1)
 
 	go func() {
-		1
 		defer wg.Done()
 		for {
 			select {

@@ -5,84 +5,105 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/application/dto"
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/application/port"
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/domain/domainerr"
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/domain/entity"
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/domain/valueobject"
+	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/infrastructure/database"
 )
 
 // Refresh handles token rotation by issuing a new pair of tokens.
 func (s *AuthService) Refresh(ctx context.Context, req dto.RefreshRequest) (*dto.TokenPairResponse, error) {
 	now := time.Now()
 
-	// 1. Атомарный отзыв старого токена (Token Rotation)
-	// Это предотвращает Race Condition, когда два запроса одновременно пытаются обновить один токен.
+	// 1. Поиск токена по хешу
 	tokenHash := s.tokenHasher.Hash(req.RefreshToken)
-	oldToken, wasRevokedAt, err := s.tokenRepo.RevokeByHash(ctx, tokenHash, now)
-	if err != nil {
-		if domainerr.IsNotFound(err) {
-			return nil, domainerr.ErrInvalidToken
+
+	// 2. Получение данных пользователя (вне транзакции для оптимизации)
+	var oldToken *entity.RefreshToken
+	var wasRevokedAt *time.Time
+	var user *entity.User
+
+	// 3. Атомарный отзыв старого токена и сохранение нового в транзакции
+	var accessToken string
+	var newRefreshTokenRaw string
+
+	err := database.WithTransaction(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
+		// Revoke old token atomically
+		var err error
+		oldToken, wasRevokedAt, err = s.tokenRepo.RevokeByHashTx(ctx, tx, tokenHash, now)
+		if err != nil {
+			if domainerr.IsNotFound(err) {
+				return domainerr.ErrInvalidToken
+			}
+			return fmt.Errorf("revoke and find refresh token: %w", err)
 		}
-		return nil, fmt.Errorf("revoke and find refresh token: %w", err)
-	}
 
-	// 2. Проверка валидности (до того, как мы его отозвали сейчас)
-	if wasRevokedAt != nil {
-		return nil, domainerr.ErrRefreshTokenRevoked
-	}
-	if !oldToken.ExpiresAt().After(now) {
-		return nil, domainerr.ErrTokenExpired
-	}
-
-	// 3. Получение данных пользователя
-	user, err := s.userRepo.GetByID(ctx, oldToken.UserID())
-	if err != nil {
-		if domainerr.IsNotFound(err) {
-			return nil, domainerr.ErrUserNotFound
+		// Check validity (before we revoked it just now)
+		if wasRevokedAt != nil {
+			return domainerr.ErrRefreshTokenRevoked
 		}
-		return nil, fmt.Errorf("get user for refresh: %w", err)
-	}
+		if !oldToken.ExpiresAt().After(now) {
+			return domainerr.ErrTokenExpired
+		}
 
-	// 5. Проверка активности пользователя
-	if !user.CanLogin() {
-		return nil, domainerr.ErrUserInactive
-	}
+		// Get user data
+		user, err = s.userRepo.GetByID(ctx, oldToken.UserID())
+		if err != nil {
+			if domainerr.IsNotFound(err) {
+				return domainerr.ErrUserNotFound
+			}
+			return fmt.Errorf("get user for refresh: %w", err)
+		}
 
-	// 6. Генерация новых токенов
-	claims := port.TokenClaims{
-		UserID: user.ID().String(),
-		Email:  user.Email().String(),
-	}
-	accessToken, err := s.tokenManager.GenerateAccessToken(claims, now)
+		// Check user is active
+		if !user.CanLogin() {
+			return domainerr.ErrUserInactive
+		}
+
+		// Generate new tokens
+		claims := port.TokenClaims{
+			UserID: user.ID().String(),
+			Email:  user.Email().String(),
+		}
+		accessToken, err = s.tokenManager.GenerateAccessToken(claims, now)
+		if err != nil {
+			return fmt.Errorf("generate access token: %w", err)
+		}
+
+		newRefreshTokenRaw, err = s.tokenManager.GenerateRefreshToken()
+		if err != nil {
+			return fmt.Errorf("generate new refresh token: %w", err)
+		}
+
+		// Save new refresh token
+		newRefreshTokenHash := s.tokenHasher.Hash(newRefreshTokenRaw)
+		expiresAt := now.Add(s.tokenManager.RefreshTokenTTL())
+
+		newRefreshToken := entity.NewRefreshToken(
+			valueobject.NewRefreshTokenID(),
+			user.ID(),
+			newRefreshTokenHash,
+			expiresAt,
+			req.IPAddress,
+			req.UserAgent,
+			now,
+		)
+
+		if err := s.tokenRepo.SaveTx(ctx, tx, newRefreshToken); err != nil {
+			return fmt.Errorf("save new refresh token: %w", err)
+		}
+
+		return nil
+	})
 	if err != nil {
-		return nil, fmt.Errorf("generate access token: %w", err)
+		return nil, err
 	}
 
-	newRefreshTokenRaw, err := s.tokenManager.GenerateRefreshToken()
-	if err != nil {
-		return nil, fmt.Errorf("generate new refresh token: %w", err)
-	}
-
-	// 7. Сохранение нового Refresh токена
-	newRefreshTokenHash := s.tokenHasher.Hash(newRefreshTokenRaw)
-	expiresAt := now.Add(s.tokenManager.RefreshTokenTTL())
-
-	newRefreshToken := entity.NewRefreshToken(
-		valueobject.NewRefreshTokenID(),
-		user.ID(),
-		newRefreshTokenHash,
-		expiresAt,
-		req.IPAddress,
-		req.UserAgent,
-		now,
-	)
-
-	if err := s.tokenRepo.Save(ctx, newRefreshToken); err != nil {
-		return nil, fmt.Errorf("save new refresh token: %w", err)
-	}
-
-	// 8. Лог аудита
+	// 4. Лог аудита (вне транзакции, так как его сбой не критичен)
 	auditLog := entity.NewAuditLog(
 		valueobject.NewAuditLogID(),
 		user.ID(),
