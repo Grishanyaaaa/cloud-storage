@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net"
 	"net/http"
+	"strings"
 
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/application/dto"
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/application/port"
@@ -22,12 +23,31 @@ func NewAuthHandler(useCase port.AuthUseCase, tokenManager port.TokenManager) *A
 }
 
 // extractClientInfo extracts IP address and User-Agent from the request.
+// When behind a reverse proxy, it checks X-Forwarded-For and X-Real-IP headers.
 func extractClientInfo(r *http.Request) (ip, userAgent string) {
-	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
-		ip = host
-	} else {
-		ip = r.RemoteAddr
+	// Try X-Forwarded-For first (comma-separated list, first is client)
+	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+		if idx := strings.Index(xff, ","); idx != -1 {
+			ip = strings.TrimSpace(xff[:idx])
+		} else {
+			ip = strings.TrimSpace(xff)
+		}
 	}
+
+	// Fallback to X-Real-IP
+	if ip == "" {
+		ip = r.Header.Get("X-Real-IP")
+	}
+
+	// Fallback to RemoteAddr
+	if ip == "" {
+		if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
+			ip = host
+		} else {
+			ip = r.RemoteAddr
+		}
+	}
+
 	if ip == "" {
 		ip = "unknown"
 	}
