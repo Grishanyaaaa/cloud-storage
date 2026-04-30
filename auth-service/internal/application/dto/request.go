@@ -34,6 +34,10 @@ func (r *RegisterRequest) Validate() error {
 	if r.Password == "" {
 		return ErrPasswordRequired
 	}
+	// bcrypt has a maximum password length of 72 bytes
+	if len(r.Password) > 72 {
+		return ErrPasswordTooLong
+	}
 	return nil
 }
 
@@ -44,6 +48,10 @@ func (r *LoginRequest) Validate() error {
 	}
 	if r.Password == "" {
 		return ErrPasswordRequired
+	}
+	// bcrypt has a maximum password length of 72 bytes
+	if len(r.Password) > 72 {
+		return ErrPasswordTooLong
 	}
 	return nil
 }
