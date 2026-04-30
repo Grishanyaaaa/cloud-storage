@@ -8,6 +8,7 @@ import (
 
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/application/dto"
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/domain/domainerr"
+	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/domain/valueobject"
 )
 
 type Response struct {
@@ -51,13 +52,21 @@ func SendError(w http.ResponseWriter, err error) {
 		message = err.Error()
 	} else if errors.Is(err, dto.ErrEmailRequired) ||
 		errors.Is(err, dto.ErrPasswordRequired) ||
+		errors.Is(err, dto.ErrPasswordTooLong) ||
 		errors.Is(err, dto.ErrRefreshTokenRequired) ||
 		errors.Is(err, dto.ErrInvalidRefreshTokenFormat) {
 		code = http.StatusBadRequest
 		message = err.Error()
 	} else {
-		// Логируем неизвестные ошибки для отладки
-		slog.Error("unhandled error in handler", "error", err)
+		// Check for PasswordValidationError with detailed validation errors
+		var pwdErr valueobject.PasswordValidationError
+		if errors.As(err, &pwdErr) {
+			code = http.StatusBadRequest
+			message = pwdErr.Error()
+		} else {
+			// Логируем неизвестные ошибки для отладки
+			slog.Error("unhandled error in handler", "error", err)
+		}
 	}
 
 	w.WriteHeader(code)
