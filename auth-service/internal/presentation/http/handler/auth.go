@@ -143,11 +143,14 @@ func (h *AuthHandler) GetJWKS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Encode to buffer first to catch encoding errors before writing headers
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(jwks); err != nil {
-		// If encoding fails, log it but we can't change status code anymore
-		// since headers were already sent
-		http.Error(w, "failed to encode JWKS", http.StatusInternalServerError)
+	// Marshal to buffer first to catch encoding errors before writing headers
+	data, err := json.Marshal(jwks)
+	if err != nil {
+		SendError(w, err)
+		return
 	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(data)
 }
