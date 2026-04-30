@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -25,7 +26,7 @@ func main() {
 	cfg := config.MustLoad()
 
 	// 2. Инициализация логгера
-	log := logger.SetupLogger(cfg.Env)
+	log := logger.SetupLogger(strings.ToUpper(cfg.Env))
 	log.Info("starting auth-service", slog.String("env", cfg.Env))
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
