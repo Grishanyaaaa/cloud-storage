@@ -30,5 +30,6 @@ deployments/.env
 
 # Логи
 *.log
+CLAUDE.md
 antigravety-agent.md
 freeclaude.sh
