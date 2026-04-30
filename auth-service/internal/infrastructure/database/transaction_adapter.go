@@ -33,6 +33,8 @@ func (a *pgxTransactionAdapter) Rollback(ctx context.Context) error {
 
 // unwrapTx extracts the underlying pgx.Tx from a Transaction interface.
 // This is used internally by repository implementations.
+// Panics if the transaction is not a pgxTransactionAdapter, which indicates
+// a programming error (wrong transaction type passed to repository method).
 func unwrapTx(tx repository.Transaction) pgx.Tx {
 	if adapter, ok := tx.(*pgxTransactionAdapter); ok {
 		return adapter.tx
