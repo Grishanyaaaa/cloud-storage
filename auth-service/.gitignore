@@ -33,3 +33,5 @@ deployments/.env
 CLAUDE.md
 antigravety-agent.md
 freeclaude.sh
+.gitignore
+deployments/k8s

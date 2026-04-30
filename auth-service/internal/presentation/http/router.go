@@ -25,7 +25,7 @@ func NewRouter(authHandler *handler.AuthHandler, corsConfig config.CORSConfig) (
 	r.Use(rateLimiter.Middleware)
 
 	// Эндпоинты аутентификации
-	r.Route("/auth", func(r chi.Router) {
+	r.Route("/auth/v1", func(r chi.Router) {
 		r.Post("/register", authHandler.Register)
 		r.Post("/login", authHandler.Login)
 		r.Post("/refresh", authHandler.Refresh)
