@@ -97,9 +97,9 @@ func main() {
 		for {
 			select {
 			case <-cleanupTicker.C:
-				// Create a new context with timeout for each cleanup operation
-				// to avoid using the signal context which may be cancelled
-				cleanupCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+				// Use parent context with timeout for cleanup operations
+				// to allow proper cancellation on shutdown
+				cleanupCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 				deleted, err := authUseCase.CleanupExpiredTokens(cleanupCtx)
 				cancel()
 				if err != nil {
