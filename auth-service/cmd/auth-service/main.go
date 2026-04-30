@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -88,7 +89,11 @@ func main() {
 	cleanupTicker := time.NewTicker(24 * time.Hour)
 	defer cleanupTicker.Stop()
 
+	var wg sync.WaitGroup
+	wg.Add(1)
+
 	go func() {
+		defer wg.Done()
 		for {
 			select {
 			case <-cleanupTicker.C:
@@ -110,6 +115,9 @@ func main() {
 
 	<-ctx.Done()
 	log.Info("stopping server...")
+
+	// Wait for cleanup goroutine to finish
+	wg.Wait()
 
 	// Graceful Shutdown
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.Server.ShutdownTimeout)
