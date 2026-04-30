@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/application/dto"
-	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/domain/domainerr"
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/domain/entity"
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/domain/valueobject"
 )
@@ -25,32 +24,23 @@ func (s *AuthService) Register(ctx context.Context, req dto.RegisterRequest) (*d
 		return nil, fmt.Errorf("invalid password: %w", err)
 	}
 
-	// 3. Проверка существования пользователя
-	exists, err := s.userRepo.ExistsByEmail(ctx, email)
-	if err != nil {
-		return nil, fmt.Errorf("check user existence: %w", err)
-	}
-	if exists {
-		return nil, domainerr.ErrUserAlreadyExists
-	}
-
-	// 4. Хеширование пароля
+	// 3. Хеширование пароля
 	hashedPassword, err := s.hasher.Hash(password.String())
 	if err != nil {
 		return nil, fmt.Errorf("hash password: %w", err)
 	}
 
-	// 5. Создание новой сущности пользователя
+	// 4. Создание новой сущности пользователя
 	now := time.Now()
 	userID := valueobject.NewUserID()
 	user := entity.NewUser(userID, email, hashedPassword, now)
 
-	// 6. Сохранение в репозитории
+	// 5. Сохранение в репозитории (UNIQUE constraint гарантирует уникальность email)
 	if err := s.userRepo.Create(ctx, user); err != nil {
 		return nil, fmt.Errorf("create user: %w", err)
 	}
 
-	// 7. Создание записи в логе аудита
+	// 6. Создание записи в логе аудита
 	auditLog := entity.NewAuditLog(
 		valueobject.NewAuditLogID(),
 		userID,
