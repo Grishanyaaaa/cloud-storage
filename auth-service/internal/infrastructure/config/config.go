@@ -18,8 +18,7 @@ type Config struct {
 func MustLoad() *Config {
 	var cfg Config
 
-	// 1. Попытка загрузить из .env файла
-	// Мы игнорируем ошибку, если файла нет (например, в Docker-контейнере)
+	// Ignore error if .env file doesn't exist (e.g., in Docker with env vars)
 	_ = cleanenv.ReadConfig("deployments/.env", &cfg)
 
 	// 2. Чтение переменных окружения (они приоритетнее файла)
