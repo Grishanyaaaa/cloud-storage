@@ -2,8 +2,6 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: cloud-storage-ingress
-  annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /
 spec:
   ingressClassName: nginx
   rules:
@@ -28,8 +26,8 @@ spec:
                 port:
                   number: 80
 
-          # Health checks
-          - path: /health
+          # JWKS endpoint
+          - path: /.well-known
             pathType: Prefix
             backend:
               service:
@@ -37,8 +35,17 @@ spec:
                 port:
                   number: 80
 
+          # Health checks
+          - path: /health
+            pathType: Exact
+            backend:
+              service:
+                name: api-gateway
+                port:
+                  number: 80
+
           - path: /ready
-            pathType: Prefix
+            pathType: Exact
             backend:
               service:
                 name: api-gateway
