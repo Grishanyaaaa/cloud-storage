@@ -48,6 +48,13 @@ func extractClientInfo(r *http.Request) (ip, userAgent string) {
 		}
 	}
 
+	// Strip port if present (handles cases where proxy sends IP:PORT)
+	if ip != "" {
+		if host, _, err := net.SplitHostPort(ip); err == nil {
+			ip = host
+		}
+	}
+
 	// Leave empty if still no valid IP (will be stored as NULL in DB)
 	// Don't use "unknown" as it's not a valid IP address
 
