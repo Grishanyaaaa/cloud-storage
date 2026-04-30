@@ -21,6 +21,25 @@ func NewAuthHandler(useCase port.AuthUseCase, tokenManager port.TokenManager) *A
 	}
 }
 
+// extractClientInfo extracts IP address and User-Agent from the request.
+func extractClientInfo(r *http.Request) (ip, userAgent string) {
+	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
+		ip = host
+	} else {
+		ip = r.RemoteAddr
+	}
+	if ip == "" {
+		ip = "unknown"
+	}
+
+	userAgent = r.UserAgent()
+	if userAgent == "" {
+		userAgent = "unknown"
+	}
+
+	return ip, userAgent
+}
+
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	var req dto.RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -33,19 +52,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
-		req.IPAddress = host
-	} else {
-		req.IPAddress = r.RemoteAddr
-	}
-	if req.IPAddress == "" {
-		req.IPAddress = "unknown"
-	}
-
-	req.UserAgent = r.UserAgent()
-	if req.UserAgent == "" {
-		req.UserAgent = "unknown"
-	}
+	req.IPAddress, req.UserAgent = extractClientInfo(r)
 
 	resp, err := h.useCase.Register(r.Context(), req)
 	if err != nil {
@@ -68,19 +75,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
-		req.IPAddress = host
-	} else {
-		req.IPAddress = r.RemoteAddr
-	}
-	if req.IPAddress == "" {
-		req.IPAddress = "unknown"
-	}
-
-	req.UserAgent = r.UserAgent()
-	if req.UserAgent == "" {
-		req.UserAgent = "unknown"
-	}
+	req.IPAddress, req.UserAgent = extractClientInfo(r)
 
 	resp, err := h.useCase.Login(r.Context(), req)
 	if err != nil {
@@ -103,19 +98,7 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
-		req.IPAddress = host
-	} else {
-		req.IPAddress = r.RemoteAddr
-	}
-	if req.IPAddress == "" {
-		req.IPAddress = "unknown"
-	}
-
-	req.UserAgent = r.UserAgent()
-	if req.UserAgent == "" {
-		req.UserAgent = "unknown"
-	}
+	req.IPAddress, req.UserAgent = extractClientInfo(r)
 
 	resp, err := h.useCase.Refresh(r.Context(), req)
 	if err != nil {
@@ -138,19 +121,7 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
-		req.IPAddress = host
-	} else {
-		req.IPAddress = r.RemoteAddr
-	}
-	if req.IPAddress == "" {
-		req.IPAddress = "unknown"
-	}
-
-	req.UserAgent = r.UserAgent()
-	if req.UserAgent == "" {
-		req.UserAgent = "unknown"
-	}
+	req.IPAddress, req.UserAgent = extractClientInfo(r)
 
 	if err := h.useCase.Logout(r.Context(), req); err != nil {
 		SendError(w, err)
