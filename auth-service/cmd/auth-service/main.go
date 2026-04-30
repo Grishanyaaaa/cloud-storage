@@ -77,7 +77,7 @@ func main() {
 
 	// 9. Инициализация презентации (HTTP)
 	authHandler := handler.NewAuthHandler(authUseCase, tokenManager)
-	router := httpserver.NewRouter(authHandler, cfg.CORS)
+	router, rateLimiter := httpserver.NewRouter(authHandler, cfg.CORS)
 	srv := httpserver.NewServer(cfg.Server, router)
 
 	// 10. Запуск сервера
@@ -119,6 +119,9 @@ func main() {
 
 	<-ctx.Done()
 	log.Info("stopping server...")
+
+	// Stop rate limiter cleanup goroutine
+	rateLimiter.Stop()
 
 	// Wait for cleanup goroutine to finish
 	wg.Wait()

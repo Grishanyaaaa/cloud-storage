@@ -10,7 +10,7 @@ import (
 	custommiddleware "github.com/Grishanyaaaa/cloud-storage/auth-service/internal/presentation/http/middleware"
 )
 
-func NewRouter(authHandler *handler.AuthHandler, corsConfig config.CORSConfig) *chi.Mux {
+func NewRouter(authHandler *handler.AuthHandler, corsConfig config.CORSConfig) (*chi.Mux, *custommiddleware.RateLimiter) {
 	r := chi.NewRouter()
 
 	// Базовые мидлвари
@@ -35,5 +35,5 @@ func NewRouter(authHandler *handler.AuthHandler, corsConfig config.CORSConfig) *
 	// JWKS эндпоинт для Gateway и других сервисов
 	r.Get("/.well-known/jwks.json", authHandler.GetJWKS)
 
-	return r
+	return r, rateLimiter
 }
