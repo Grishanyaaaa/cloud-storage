@@ -5,12 +5,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/jackc/pgx/v5"
-
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/application/dto"
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/application/port"
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/domain/domainerr"
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/domain/entity"
+	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/domain/repository"
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/domain/valueobject"
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/infrastructure/database"
 )
@@ -31,7 +30,7 @@ func (s *AuthService) Refresh(ctx context.Context, req dto.RefreshRequest) (*dto
 	var accessToken string
 	var newRefreshTokenRaw string
 
-	err := database.WithTransaction(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
+	err := database.WithTransaction(ctx, s.pool, func(ctx context.Context, tx repository.Transaction) error {
 		// Revoke old token atomically
 		var err error
 		oldToken, wasRevokedAt, err = s.tokenRepo.RevokeByHashTx(ctx, tx, tokenHash, now)

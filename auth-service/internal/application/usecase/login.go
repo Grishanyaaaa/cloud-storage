@@ -5,12 +5,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/jackc/pgx/v5"
-
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/application/dto"
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/application/port"
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/domain/domainerr"
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/domain/entity"
+	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/domain/repository"
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/domain/valueobject"
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/infrastructure/database"
 )
@@ -79,7 +78,7 @@ func (s *AuthService) Login(ctx context.Context, req dto.LoginRequest) (*dto.Tok
 		now,
 	)
 
-	err = database.WithTransaction(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
+	err = database.WithTransaction(ctx, s.pool, func(ctx context.Context, tx repository.Transaction) error {
 		// Update user last login
 		user.UpdateLastLogin(now)
 		if err := s.userRepo.UpdateTx(ctx, tx, user); err != nil {

@@ -59,7 +59,7 @@ func (r *RefreshTokenRepositoryPg) Save(ctx context.Context, token *entity.Refre
 	return nil
 }
 
-func (r *RefreshTokenRepositoryPg) SaveTx(ctx context.Context, tx pgx.Tx, token *entity.RefreshToken) error {
+func (r *RefreshTokenRepositoryPg) SaveTx(ctx context.Context, tx repository.Transaction, token *entity.RefreshToken) error {
 	const q = `
 		INSERT INTO refresh_tokens (id, user_id, token_hash, expires_at, created_at, revoked_at, ip_address, user_agent)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
@@ -69,7 +69,8 @@ func (r *RefreshTokenRepositoryPg) SaveTx(ctx context.Context, tx pgx.Tx, token 
 		return fmt.Errorf("invalid ip address: %w", err)
 	}
 
-	_, err = tx.Exec(ctx, q,
+	pgxTx := unwrapTx(tx)
+	_, err = pgxTx.Exec(ctx, q,
 		token.ID().String(),
 		token.UserID().String(),
 		token.TokenHash(),
@@ -211,7 +212,7 @@ func (r *RefreshTokenRepositoryPg) RevokeByHash(ctx context.Context, tokenHash s
 	return token, wasRevokedAt, nil
 }
 
-func (r *RefreshTokenRepositoryPg) RevokeByHashTx(ctx context.Context, tx pgx.Tx, tokenHash string, now time.Time) (*entity.RefreshToken, *time.Time, error) {
+func (r *RefreshTokenRepositoryPg) RevokeByHashTx(ctx context.Context, tx repository.Transaction, tokenHash string, now time.Time) (*entity.RefreshToken, *time.Time, error) {
 	const q = `
 		WITH old_data AS (
 			SELECT id, revoked_at FROM refresh_tokens WHERE token_hash = $1 FOR UPDATE
@@ -240,7 +241,8 @@ func (r *RefreshTokenRepositoryPg) RevokeByHashTx(ctx context.Context, tx pgx.Tx
 		wasRevokedAt *time.Time
 	)
 
-	err := tx.QueryRow(ctx, q, tokenHash, now).Scan(
+	pgxTx := unwrapTx(tx)
+	err := pgxTx.QueryRow(ctx, q, tokenHash, now).Scan(
 		&id, &userID, &hash,
 		&expiresAt, &createdAt, &revokedAt,
 		&ipAddress, &userAgent, &wasRevokedAt,

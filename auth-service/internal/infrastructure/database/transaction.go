@@ -4,21 +4,25 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/domain/repository"
 )
 
 // TxFunc is a function that executes within a transaction.
-type TxFunc func(ctx context.Context, tx pgx.Tx) error
+type TxFunc func(ctx context.Context, tx repository.Transaction) error
 
 // WithTransaction executes a function within a database transaction.
 // If the function returns an error, the transaction is rolled back.
 // Otherwise, the transaction is committed.
 func WithTransaction(ctx context.Context, pool *pgxpool.Pool, fn TxFunc) error {
-	tx, err := pool.Begin(ctx)
+	pgxTx, err := pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("begin transaction: %w", err)
 	}
+
+	// Wrap pgx.Tx in domain Transaction interface
+	tx := newTransactionAdapter(pgxTx)
 
 	// Ensure rollback on panic or error
 	defer func() {

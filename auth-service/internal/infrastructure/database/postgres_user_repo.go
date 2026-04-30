@@ -97,13 +97,14 @@ func (r *UserRepositoryPg) Update(ctx context.Context, user *entity.User) error 
 	return nil
 }
 
-func (r *UserRepositoryPg) UpdateTx(ctx context.Context, tx pgx.Tx, user *entity.User) error {
+func (r *UserRepositoryPg) UpdateTx(ctx context.Context, tx repository.Transaction, user *entity.User) error {
 	const q = `
 		UPDATE users
 		SET email = $2, password_hash = $3, updated_at = $4, last_login = $5, is_active = $6
 		WHERE id = $1`
 
-	tag, err := tx.Exec(ctx, q,
+	pgxTx := unwrapTx(tx)
+	tag, err := pgxTx.Exec(ctx, q,
 		user.ID().String(),
 		user.Email().String(),
 		user.PasswordHash(),
