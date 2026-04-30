@@ -48,9 +48,8 @@ func extractClientInfo(r *http.Request) (ip, userAgent string) {
 		}
 	}
 
-	if ip == "" {
-		ip = "unknown"
-	}
+	// Leave empty if still no valid IP (will be stored as NULL in DB)
+	// Don't use "unknown" as it's not a valid IP address
 
 	userAgent = r.UserAgent()
 	if userAgent == "" {
