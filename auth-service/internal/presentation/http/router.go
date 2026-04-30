@@ -13,6 +13,7 @@ func NewRouter(authHandler *handler.AuthHandler, corsConfig config.CORSConfig) *
 	r := chi.NewRouter()
 
 	// Базовые мидлвари
+	r.Use(middleware.RequestID)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.CleanPath)
