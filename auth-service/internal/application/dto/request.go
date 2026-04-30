@@ -53,6 +53,16 @@ func (r *RefreshRequest) Validate() error {
 	if r.RefreshToken == "" {
 		return ErrRefreshTokenRequired
 	}
+	// Refresh token должен быть 64 символа (32 байта в hex)
+	if len(r.RefreshToken) != 64 {
+		return ErrInvalidRefreshTokenFormat
+	}
+	// Проверка, что это валидный hex
+	for _, c := range r.RefreshToken {
+		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
+			return ErrInvalidRefreshTokenFormat
+		}
+	}
 	return nil
 }
 
@@ -60,6 +70,16 @@ func (r *RefreshRequest) Validate() error {
 func (r *LogoutRequest) Validate() error {
 	if r.RefreshToken == "" {
 		return ErrRefreshTokenRequired
+	}
+	// Refresh token должен быть 64 символа (32 байта в hex)
+	if len(r.RefreshToken) != 64 {
+		return ErrInvalidRefreshTokenFormat
+	}
+	// Проверка, что это валидный hex
+	for _, c := range r.RefreshToken {
+		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
+			return ErrInvalidRefreshTokenFormat
+		}
 	}
 	return nil
 }
