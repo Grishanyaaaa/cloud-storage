@@ -56,10 +56,13 @@ func main() {
 	tokenRepo := database.NewRefreshTokenRepository(pool)
 	auditRepo := database.NewAuditLogRepository(pool)
 
-	// 6. Инициализация политики паролей
+	// 6. Инициализация transaction manager
+	txManager := database.NewTransactionManager(pool)
+
+	// 7. Инициализация политики паролей
 	passwordPolicy := security.NewPasswordPolicy(cfg.Security)
 
-	// 7. Инициализация юзкейсов (Application layer)
+	// 8. Инициализация юзкейсов (Application layer)
 	authUseCase := usecase.NewAuthService(
 		userRepo,
 		tokenRepo,
@@ -68,16 +71,16 @@ func main() {
 		tokenManager,
 		tokenHasher,
 		passwordPolicy,
-		pool,
+		txManager,
 		log,
 	)
 
-	// 8. Инициализация презентации (HTTP)
+	// 9. Инициализация презентации (HTTP)
 	authHandler := handler.NewAuthHandler(authUseCase, tokenManager)
 	router := httpserver.NewRouter(authHandler, cfg.CORS)
 	srv := httpserver.NewServer(cfg.Server, router)
 
-	// 9. Запуск сервера
+	// 10. Запуск сервера
 	go func() {
 		log.Info("server started", slog.Int("port", cfg.Server.Port))
 		if err := srv.Start(); err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -86,7 +89,7 @@ func main() {
 		}
 	}()
 
-	// 10. Запуск периодической очистки истекших токенов (каждые 24 часа)
+	// 11. Запуск периодической очистки истекших токенов (каждые 24 часа)
 	cleanupTicker := time.NewTicker(24 * time.Hour)
 	defer cleanupTicker.Stop()
 

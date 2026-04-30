@@ -11,7 +11,6 @@ import (
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/domain/entity"
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/domain/repository"
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/domain/valueobject"
-	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/infrastructure/database"
 )
 
 // Login handles user authentication and issues tokens.
@@ -78,7 +77,7 @@ func (s *AuthService) Login(ctx context.Context, req dto.LoginRequest) (*dto.Tok
 		now,
 	)
 
-	err = database.WithTransaction(ctx, s.pool, func(ctx context.Context, tx repository.Transaction) error {
+	err = s.txManager.WithTransaction(ctx, func(ctx context.Context, tx repository.Transaction) error {
 		// Update user last login
 		user.UpdateLastLogin(now)
 		if err := s.userRepo.UpdateTx(ctx, tx, user); err != nil {

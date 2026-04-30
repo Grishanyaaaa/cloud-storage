@@ -11,7 +11,6 @@ import (
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/domain/entity"
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/domain/repository"
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/domain/valueobject"
-	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/infrastructure/database"
 )
 
 // Refresh handles token rotation by issuing a new pair of tokens.
@@ -30,7 +29,7 @@ func (s *AuthService) Refresh(ctx context.Context, req dto.RefreshRequest) (*dto
 	var accessToken string
 	var newRefreshTokenRaw string
 
-	err := database.WithTransaction(ctx, s.pool, func(ctx context.Context, tx repository.Transaction) error {
+	err := s.txManager.WithTransaction(ctx, func(ctx context.Context, tx repository.Transaction) error {
 		// Revoke old token atomically
 		var err error
 		oldToken, wasRevokedAt, err = s.tokenRepo.RevokeByHashTx(ctx, tx, tokenHash, now)

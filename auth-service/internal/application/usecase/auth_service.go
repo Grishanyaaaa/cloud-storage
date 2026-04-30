@@ -3,8 +3,6 @@ package usecase
 import (
 	"log/slog"
 
-	"github.com/jackc/pgx/v5/pgxpool"
-
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/application/port"
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/domain/repository"
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/domain/valueobject"
@@ -20,7 +18,7 @@ type AuthService struct {
 	tokenManager   port.TokenManager
 	tokenHasher    port.TokenHasher
 	passwordPolicy valueobject.PasswordPolicy
-	pool           *pgxpool.Pool
+	txManager      repository.TransactionManager
 	logger         *slog.Logger
 }
 
@@ -33,7 +31,7 @@ func NewAuthService(
 	tokenManager port.TokenManager,
 	tokenHasher port.TokenHasher,
 	passwordPolicy valueobject.PasswordPolicy,
-	pool *pgxpool.Pool,
+	txManager repository.TransactionManager,
 	logger *slog.Logger,
 ) *AuthService {
 	return &AuthService{
@@ -44,7 +42,7 @@ func NewAuthService(
 		tokenManager:   tokenManager,
 		tokenHasher:    tokenHasher,
 		passwordPolicy: passwordPolicy,
-		pool:           pool,
+		txManager:      txManager,
 		logger:         logger,
 	}
 }
