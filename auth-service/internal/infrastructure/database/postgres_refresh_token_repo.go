@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/domain/domainerr"
@@ -48,6 +49,10 @@ func (r *RefreshTokenRepositoryPg) Save(ctx context.Context, token *entity.Refre
 		nullableString(token.UserAgent()),
 	)
 	if err != nil {
+		// Check for unique violation on token_hash
+		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == uniqueViolation {
+			return fmt.Errorf("duplicate refresh token hash (collision): %w", err)
+		}
 		return fmt.Errorf("save refresh token: %w", err)
 	}
 
@@ -75,6 +80,10 @@ func (r *RefreshTokenRepositoryPg) SaveTx(ctx context.Context, tx pgx.Tx, token 
 		nullableString(token.UserAgent()),
 	)
 	if err != nil {
+		// Check for unique violation on token_hash
+		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == uniqueViolation {
+			return fmt.Errorf("duplicate refresh token hash (collision): %w", err)
+		}
 		return fmt.Errorf("save refresh token in transaction: %w", err)
 	}
 
