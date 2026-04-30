@@ -54,7 +54,9 @@ func SendError(w http.ResponseWriter, err error) {
 		errors.Is(err, dto.ErrPasswordRequired) ||
 		errors.Is(err, dto.ErrPasswordTooLong) ||
 		errors.Is(err, dto.ErrRefreshTokenRequired) ||
-		errors.Is(err, dto.ErrInvalidRefreshTokenFormat) {
+		errors.Is(err, dto.ErrInvalidRefreshTokenFormat) ||
+		errors.Is(err, valueobject.ErrInvalidEmail) ||
+		errors.Is(err, valueobject.ErrEmailTooLong) {
 		code = http.StatusBadRequest
 		message = err.Error()
 	} else {
