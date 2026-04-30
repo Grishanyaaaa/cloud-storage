@@ -2,6 +2,7 @@ package security
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/infrastructure/config"
 	"golang.org/x/crypto/bcrypt"
@@ -19,7 +20,7 @@ func NewBcryptHasher(cfg config.SecurityConfig) *BcryptHasher {
 func (h *BcryptHasher) Hash(password string) (string, error) {
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), h.cost)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("bcrypt hash: %w", err)
 	}
 	return string(bytes), nil
 }
@@ -31,7 +32,7 @@ func (h *BcryptHasher) Compare(hashedPassword, password string) (bool, error) {
 		return false, nil
 	}
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("bcrypt compare: %w", err)
 	}
 	return true, nil
 }
