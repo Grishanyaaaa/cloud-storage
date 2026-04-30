@@ -92,7 +92,11 @@ func main() {
 		for {
 			select {
 			case <-cleanupTicker.C:
-				deleted, err := authUseCase.CleanupExpiredTokens(ctx, log)
+				// Create a new context with timeout for each cleanup operation
+				// to avoid using the signal context which may be cancelled
+				cleanupCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+				deleted, err := authUseCase.CleanupExpiredTokens(cleanupCtx, log)
+				cancel()
 				if err != nil {
 					log.Error("failed to cleanup expired tokens", "error", err)
 				} else if deleted > 0 {
