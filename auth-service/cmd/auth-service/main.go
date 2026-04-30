@@ -69,6 +69,7 @@ func main() {
 		tokenHasher,
 		passwordPolicy,
 		pool,
+		log,
 	)
 
 	// 8. Инициализация презентации (HTTP)

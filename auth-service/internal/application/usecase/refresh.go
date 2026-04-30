@@ -112,8 +112,9 @@ func (s *AuthService) Refresh(ctx context.Context, req dto.RefreshRequest) (*dto
 		req.UserAgent,
 		now,
 	)
-	// Игнорируем ошибку сохранения audit log - логирование будет в presentation layer
-	_ = s.auditRepo.Save(ctx, auditLog)
+	if err := s.auditRepo.Save(ctx, auditLog); err != nil {
+		s.logger.WarnContext(ctx, "failed to save audit log", "error", err, "action", "refresh", "user_id", user.ID().String())
+	}
 
 	return &dto.TokenPairResponse{
 		AccessToken:  accessToken,

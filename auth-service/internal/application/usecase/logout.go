@@ -40,8 +40,9 @@ func (s *AuthService) Logout(ctx context.Context, req dto.LogoutRequest) error {
 		req.UserAgent,
 		now,
 	)
-	// Игнорируем ошибку сохранения audit log - логирование будет в presentation layer
-	_ = s.auditRepo.Save(ctx, auditLog)
+	if err := s.auditRepo.Save(ctx, auditLog); err != nil {
+		s.logger.WarnContext(ctx, "failed to save audit log", "error", err, "action", "logout", "user_id", token.UserID().String())
+	}
 
 	return nil
 }
