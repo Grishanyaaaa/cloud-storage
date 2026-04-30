@@ -152,5 +152,9 @@ func (h *AuthHandler) GetJWKS(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write(data)
+	if _, err := w.Write(data); err != nil {
+		// Log the error but don't change response status (headers already sent)
+		// This is a best-effort write; client will detect incomplete response
+		return
+	}
 }
