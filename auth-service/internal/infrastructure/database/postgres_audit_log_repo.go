@@ -52,14 +52,6 @@ func (r *AuditLogRepositoryPg) Save(ctx context.Context, log *entity.AuditLog) e
 	return nil
 }
 
-func (r *AuditLogRepositoryPg) GetByID(ctx context.Context, id valueobject.AuditLogID) (*entity.AuditLog, error) {
-	const q = `
-		SELECT id, user_id, action, ip_address, user_agent, created_at
-		FROM audit_logs WHERE id = $1`
-
-	return r.scanLog(ctx, q, id.String())
-}
-
 func (r *AuditLogRepositoryPg) FindByUserID(ctx context.Context, userID valueobject.UserID, limit, offset int) ([]*entity.AuditLog, error) {
 	const q = `
 		SELECT id, user_id, action, ip_address, user_agent, created_at
