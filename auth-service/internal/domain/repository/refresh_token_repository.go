@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/domain/entity"
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/domain/valueobject"
 )
@@ -14,6 +16,9 @@ import (
 type RefreshTokenRepository interface {
 	// Save persists a new refresh token.
 	Save(ctx context.Context, token *entity.RefreshToken) error
+
+	// SaveTx persists a new refresh token within a transaction.
+	SaveTx(ctx context.Context, tx pgx.Tx, token *entity.RefreshToken) error
 
 	// FindByTokenHash retrieves a refresh token by its hash.
 	// Returns domainerr.ErrRefreshTokenNotFound if not exists.
@@ -27,6 +32,9 @@ type RefreshTokenRepository interface {
 	// Returns the token state including whether it was already revoked.
 	// Returns domainerr.ErrRefreshTokenNotFound if not exists.
 	RevokeByHash(ctx context.Context, tokenHash string, now time.Time) (*entity.RefreshToken, *time.Time, error)
+
+	// RevokeByHashTx atomically marks a token as revoked within a transaction.
+	RevokeByHashTx(ctx context.Context, tx pgx.Tx, tokenHash string, now time.Time) (*entity.RefreshToken, *time.Time, error)
 
 	// RevokeAllByUserID revokes all active tokens for a user (logout from all devices).
 	RevokeAllByUserID(ctx context.Context, userID valueobject.UserID, now time.Time) error

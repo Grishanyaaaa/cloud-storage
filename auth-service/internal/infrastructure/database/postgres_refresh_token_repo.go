@@ -54,6 +54,33 @@ func (r *RefreshTokenRepositoryPg) Save(ctx context.Context, token *entity.Refre
 	return nil
 }
 
+func (r *RefreshTokenRepositoryPg) SaveTx(ctx context.Context, tx pgx.Tx, token *entity.RefreshToken) error {
+	const q = `
+		INSERT INTO refresh_tokens (id, user_id, token_hash, expires_at, created_at, revoked_at, ip_address, user_agent)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
+
+	ip, err := parseIPToInet(token.IPAddress())
+	if err != nil {
+		return fmt.Errorf("invalid ip address: %w", err)
+	}
+
+	_, err = tx.Exec(ctx, q,
+		token.ID().String(),
+		token.UserID().String(),
+		token.TokenHash(),
+		token.ExpiresAt(),
+		token.CreatedAt(),
+		token.RevokedAt(),
+		ip,
+		nullableString(token.UserAgent()),
+	)
+	if err != nil {
+		return fmt.Errorf("save refresh token in transaction: %w", err)
+	}
+
+	return nil
+}
+
 func (r *RefreshTokenRepositoryPg) FindByTokenHash(ctx context.Context, tokenHash string) (*entity.RefreshToken, error) {
 	const q = `
 		SELECT id, user_id, token_hash, expires_at, created_at, revoked_at, ip_address, user_agent
@@ -125,11 +152,12 @@ func (r *RefreshTokenRepositoryPg) RevokeByHash(ctx context.Context, tokenHash s
 			SET revoked_at = COALESCE(refresh_tokens.revoked_at, $2)
 			FROM old_data
 			WHERE refresh_tokens.id = old_data.id
-			RETURNING refresh_tokens.id, refresh_tokens.user_id, refresh_tokens.token_hash, 
-			          refresh_tokens.expires_at, refresh_tokens.created_at, refresh_tokens.revoked_at, 
+			RETURNING refresh_tokens.id, refresh_tokens.user_id, refresh_tokens.token_hash,
+			          refresh_tokens.expires_at, refresh_tokens.created_at, refresh_tokens.revoked_at,
 			          refresh_tokens.ip_address, refresh_tokens.user_agent, old_data.revoked_at AS was_revoked_at
 		)
-		SELECT * FROM updated`
+		SELECT id, user_id, token_hash, expires_at, created_at, revoked_at,
+		       ip_address, user_agent, was_revoked_at FROM updated`
 
 	var (
 		id           string
@@ -153,6 +181,66 @@ func (r *RefreshTokenRepositoryPg) RevokeByHash(ctx context.Context, tokenHash s
 			return nil, nil, domainerr.ErrRefreshTokenNotFound
 		}
 		return nil, nil, fmt.Errorf("revoke refresh token by hash: %w", err)
+	}
+
+	tokenID, err := valueobject.ParseRefreshTokenID(id)
+	if err != nil {
+		return nil, nil, fmt.Errorf("parse refresh token id: %w", err)
+	}
+
+	uid, err := valueobject.ParseUserID(userID)
+	if err != nil {
+		return nil, nil, fmt.Errorf("parse user id: %w", err)
+	}
+
+	token := entity.ReconstructRefreshToken(
+		tokenID, uid, hash,
+		expiresAt, createdAt, revokedAt,
+		inetToString(ipAddress), derefString(userAgent),
+	)
+
+	return token, wasRevokedAt, nil
+}
+
+func (r *RefreshTokenRepositoryPg) RevokeByHashTx(ctx context.Context, tx pgx.Tx, tokenHash string, now time.Time) (*entity.RefreshToken, *time.Time, error) {
+	const q = `
+		WITH old_data AS (
+			SELECT id, revoked_at FROM refresh_tokens WHERE token_hash = $1 FOR UPDATE
+		),
+		updated AS (
+			UPDATE refresh_tokens
+			SET revoked_at = COALESCE(refresh_tokens.revoked_at, $2)
+			FROM old_data
+			WHERE refresh_tokens.id = old_data.id
+			RETURNING refresh_tokens.id, refresh_tokens.user_id, refresh_tokens.token_hash,
+			          refresh_tokens.expires_at, refresh_tokens.created_at, refresh_tokens.revoked_at,
+			          refresh_tokens.ip_address, refresh_tokens.user_agent, old_data.revoked_at AS was_revoked_at
+		)
+		SELECT id, user_id, token_hash, expires_at, created_at, revoked_at,
+		       ip_address, user_agent, was_revoked_at FROM updated`
+
+	var (
+		id           string
+		userID       string
+		hash         string
+		expiresAt    time.Time
+		createdAt    time.Time
+		revokedAt    *time.Time
+		ipAddress     *netip.Prefix
+		userAgent    *string
+		wasRevokedAt *time.Time
+	)
+
+	err := tx.QueryRow(ctx, q, tokenHash, now).Scan(
+		&id, &userID, &hash,
+		&expiresAt, &createdAt, &revokedAt,
+		&ipAddress, &userAgent, &wasRevokedAt,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil, domainerr.ErrRefreshTokenNotFound
+		}
+		return nil, nil, fmt.Errorf("revoke refresh token by hash in transaction: %w", err)
 	}
 
 	tokenID, err := valueobject.ParseRefreshTokenID(id)

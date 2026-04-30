@@ -97,6 +97,34 @@ func (r *UserRepositoryPg) Update(ctx context.Context, user *entity.User) error 
 	return nil
 }
 
+func (r *UserRepositoryPg) UpdateTx(ctx context.Context, tx pgx.Tx, user *entity.User) error {
+	const q = `
+		UPDATE users
+		SET email = $2, password_hash = $3, updated_at = $4, last_login = $5, is_active = $6
+		WHERE id = $1`
+
+	tag, err := tx.Exec(ctx, q,
+		user.ID().String(),
+		user.Email().String(),
+		user.PasswordHash(),
+		user.UpdatedAt(),
+		user.LastLogin(),
+		user.IsActive(),
+	)
+	if err != nil {
+		if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == uniqueViolation {
+			return domainerr.ErrUserAlreadyExists
+		}
+		return fmt.Errorf("update user in transaction: %w", err)
+	}
+
+	if tag.RowsAffected() == 0 {
+		return domainerr.ErrUserNotFound
+	}
+
+	return nil
+}
+
 func (r *UserRepositoryPg) ExistsByEmail(ctx context.Context, email valueobject.Email) (bool, error) {
 	const q = `SELECT EXISTS(SELECT 1 FROM users WHERE email = $1)`
 

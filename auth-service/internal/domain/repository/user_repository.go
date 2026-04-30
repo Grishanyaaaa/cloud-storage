@@ -3,6 +3,8 @@ package repository
 import (
 	"context"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/domain/entity"
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/domain/valueobject"
 )
@@ -25,6 +27,9 @@ type UserRepository interface {
 	// Update updates an existing user.
 	// Returns domainerr.ErrUserNotFound if not exists.
 	Update(ctx context.Context, user *entity.User) error
+
+	// UpdateTx updates an existing user within a transaction.
+	UpdateTx(ctx context.Context, tx pgx.Tx, user *entity.User) error
 
 	// ExistsByEmail checks if a user with the given email exists.
 	ExistsByEmail(ctx context.Context, email valueobject.Email) (bool, error)

@@ -5,11 +5,14 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/application/dto"
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/application/port"
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/domain/domainerr"
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/domain/entity"
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/domain/valueobject"
+	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/infrastructure/database"
 )
 
 // Login handles user authentication and issues tokens.
@@ -44,14 +47,9 @@ func (s *AuthService) Login(ctx context.Context, req dto.LoginRequest) (*dto.Tok
 		return nil, domainerr.ErrInvalidCredentials
 	}
 
-	// 5. Обновление времени последнего входа
 	now := time.Now()
-	user.UpdateLastLogin(now)
-	if err := s.userRepo.Update(ctx, user); err != nil {
-		return nil, fmt.Errorf("update user last login: %w", err)
-	}
 
-	// 6. Генерация Access Token
+	// 5. Генерация Access Token
 	claims := port.TokenClaims{
 		UserID: user.ID().String(),
 		Email:  user.Email().String(),
@@ -61,13 +59,13 @@ func (s *AuthService) Login(ctx context.Context, req dto.LoginRequest) (*dto.Tok
 		return nil, fmt.Errorf("generate access token: %w", err)
 	}
 
-	// 7. Генерация Refresh Token
+	// 6. Генерация Refresh Token
 	refreshTokenRaw, err := s.tokenManager.GenerateRefreshToken()
 	if err != nil {
 		return nil, fmt.Errorf("generate refresh token: %w", err)
 	}
 
-	// 8. Сохранение Refresh Token в БД
+	// 7. Атомарное обновление last_login и сохранение refresh token в транзакции
 	refreshTokenHash := s.tokenHasher.Hash(refreshTokenRaw)
 	expiresAt := now.Add(s.tokenManager.RefreshTokenTTL())
 
@@ -81,11 +79,25 @@ func (s *AuthService) Login(ctx context.Context, req dto.LoginRequest) (*dto.Tok
 		now,
 	)
 
-	if err := s.tokenRepo.Save(ctx, refreshToken); err != nil {
-		return nil, fmt.Errorf("save refresh token: %w", err)
+	err = database.WithTransaction(ctx, s.pool, func(ctx context.Context, tx pgx.Tx) error {
+		// Update user last login
+		user.UpdateLastLogin(now)
+		if err := s.userRepo.UpdateTx(ctx, tx, user); err != nil {
+			return fmt.Errorf("update user last login: %w", err)
+		}
+
+		// Save refresh token
+		if err := s.tokenRepo.SaveTx(ctx, tx, refreshToken); err != nil {
+			return fmt.Errorf("save refresh token: %w", err)
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 
-	// 9. Лог аудита
+	// 8. Лог аудита (вне транзакции, так как его сбой не критичен)
 	auditLog := entity.NewAuditLog(
 		valueobject.NewAuditLogID(),
 		user.ID(),
