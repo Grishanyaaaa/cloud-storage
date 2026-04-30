@@ -52,6 +52,9 @@ func extractClientInfo(r *http.Request) (ip, userAgent string) {
 	// Don't use "unknown" as it's not a valid IP address
 
 	userAgent = r.UserAgent()
+	if len(userAgent) > 1024 {
+		userAgent = userAgent[:1024] // Truncate to prevent DoS via huge User-Agent
+	}
 	if userAgent == "" {
 		userAgent = "unknown"
 	}
