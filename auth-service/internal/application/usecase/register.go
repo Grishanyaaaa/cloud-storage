@@ -59,9 +59,8 @@ func (s *AuthService) Register(ctx context.Context, req dto.RegisterRequest) (*d
 		req.UserAgent,
 		now,
 	)
-	if err := s.auditRepo.Save(ctx, auditLog); err != nil {
-		s.logger.Error("failed to save audit log", "error", err, "user_id", userID.String(), "action", entity.ActionRegister)
-	}
+	// Игнорируем ошибку сохранения audit log - логирование будет в presentation layer
+	_ = s.auditRepo.Save(ctx, auditLog)
 
 	return &dto.RegisterResponse{
 		UserID: userID.String(),

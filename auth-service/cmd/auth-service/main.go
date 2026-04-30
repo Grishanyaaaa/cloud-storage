@@ -68,7 +68,6 @@ func main() {
 		tokenManager,
 		tokenHasher,
 		passwordPolicy,
-		log,
 		pool,
 	)
 
@@ -101,7 +100,7 @@ func main() {
 				// Create a new context with timeout for each cleanup operation
 				// to avoid using the signal context which may be cancelled
 				cleanupCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-				deleted, err := authUseCase.CleanupExpiredTokens(cleanupCtx, log)
+				deleted, err := authUseCase.CleanupExpiredTokens(cleanupCtx)
 				cancel()
 				if err != nil {
 					log.Error("failed to cleanup expired tokens", "error", err)

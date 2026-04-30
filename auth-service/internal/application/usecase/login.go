@@ -106,9 +106,8 @@ func (s *AuthService) Login(ctx context.Context, req dto.LoginRequest) (*dto.Tok
 		req.UserAgent,
 		now,
 	)
-	if err := s.auditRepo.Save(ctx, auditLog); err != nil {
-		s.logger.Error("failed to save audit log", "error", err, "user_id", user.ID().String(), "action", entity.ActionLogin)
-	}
+	// Игнорируем ошибку сохранения audit log - логирование будет в presentation layer
+	_ = s.auditRepo.Save(ctx, auditLog)
 
 	return &dto.TokenPairResponse{
 		AccessToken:  accessToken,
