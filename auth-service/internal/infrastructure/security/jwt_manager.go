@@ -11,6 +11,7 @@ import (
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/application/port"
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/infrastructure/config"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 )
 
 type JWTManager struct {
@@ -73,6 +74,7 @@ func (m *JWTManager) GenerateAccessToken(claims port.TokenClaims, now time.Time)
 
 	token := jwt.NewWithClaims(jwt.SigningMethodEdDSA, accessClaims{
 		RegisteredClaims: jwt.RegisteredClaims{
+			ID:        uuid.New().String(), // jti for token revocation
 			Issuer:    m.issuer,
 			Audience:  jwt.ClaimStrings{m.audience},
 			IssuedAt:  jwt.NewNumericDate(now),
