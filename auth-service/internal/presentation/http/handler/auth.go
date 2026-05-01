@@ -199,6 +199,7 @@ func (h *AuthHandler) GetJWKS(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "public, max-age=3600")
 	w.WriteHeader(http.StatusOK)
 	if _, err := w.Write(data); err != nil {
 		// Log the error but don't change response status (headers already sent)
