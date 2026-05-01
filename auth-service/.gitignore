@@ -34,4 +34,4 @@ CLAUDE.md
 antigravety-agent.md
 freeclaude.sh
 .gitignore
-deployments/k8s
+deployments/k8s/secret.yaml
