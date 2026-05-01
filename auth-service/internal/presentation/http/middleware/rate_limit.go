@@ -76,27 +76,47 @@ func (rl *RateLimiter) getLimiter(ip string) *rate.Limiter {
 // When trustProxy is true and behind a reverse proxy, it checks X-Forwarded-For and X-Real-IP headers.
 // When trustProxy is false, only RemoteAddr is used to prevent IP spoofing.
 func extractRealIP(r *http.Request, trustProxy bool) string {
+	var ip string
+
 	// Only trust proxy headers if explicitly configured
 	if trustProxy {
 		// Try X-Forwarded-For first (comma-separated list, first is client)
 		if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
 			if idx := strings.Index(xff, ","); idx != -1 {
-				return strings.TrimSpace(xff[:idx])
+				ip = strings.TrimSpace(xff[:idx])
+			} else {
+				ip = strings.TrimSpace(xff)
 			}
-			return strings.TrimSpace(xff)
+			// Validate IP from X-Forwarded-For
+			if net.ParseIP(ip) != nil {
+				return ip
+			}
+			ip = "" // Reset if invalid
 		}
 
 		// Fallback to X-Real-IP
 		if xri := r.Header.Get("X-Real-IP"); xri != "" {
-			return xri
+			// Validate IP from X-Real-IP
+			if net.ParseIP(xri) != nil {
+				return xri
+			}
 		}
 	}
 
 	// Fallback to RemoteAddr (always used when trustProxy is false)
 	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
-		return host
+		ip = host
+	} else {
+		ip = r.RemoteAddr
 	}
-	return r.RemoteAddr
+
+	// Validate final IP
+	if net.ParseIP(ip) != nil {
+		return ip
+	}
+
+	// Return empty string if no valid IP found
+	return ""
 }
 
 // Middleware returns a middleware that rate limits requests per IP.

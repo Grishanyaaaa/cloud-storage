@@ -38,11 +38,23 @@ func extractClientInfo(r *http.Request, trustProxy bool) (ip, userAgent string) 
 			} else {
 				ip = strings.TrimSpace(xff)
 			}
+			// Validate IP from X-Forwarded-For
+			if net.ParseIP(ip) != nil {
+				// Valid IP found, use it
+				goto extractUserAgent
+			}
+			ip = "" // Reset if invalid
 		}
 
 		// Fallback to X-Real-IP
 		if ip == "" {
-			ip = r.Header.Get("X-Real-IP")
+			if xri := r.Header.Get("X-Real-IP"); xri != "" {
+				// Validate IP from X-Real-IP
+				if net.ParseIP(xri) != nil {
+					ip = xri
+					goto extractUserAgent
+				}
+			}
 		}
 	}
 
@@ -62,6 +74,13 @@ func extractClientInfo(r *http.Request, trustProxy bool) (ip, userAgent string) 
 		}
 	}
 
+	// Validate final IP
+	if ip != "" && net.ParseIP(ip) == nil {
+		// Invalid IP, leave empty (will be stored as NULL in DB)
+		ip = ""
+	}
+
+extractUserAgent:
 	// Leave empty if still no valid IP (will be stored as NULL in DB)
 	// Don't use "unknown" as it's not a valid IP address
 
