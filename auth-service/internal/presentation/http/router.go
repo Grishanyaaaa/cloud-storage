@@ -10,7 +10,7 @@ import (
 	custommiddleware "github.com/Grishanyaaaa/cloud-storage/auth-service/internal/presentation/http/middleware"
 )
 
-func NewRouter(authHandler *handler.AuthHandler, corsConfig config.CORSConfig) (*chi.Mux, *custommiddleware.RateLimiter) {
+func NewRouter(authHandler *handler.AuthHandler, corsConfig config.CORSConfig, securityConfig config.SecurityConfig) (*chi.Mux, *custommiddleware.RateLimiter) {
 	r := chi.NewRouter()
 
 	// Базовые мидлвари
@@ -21,7 +21,7 @@ func NewRouter(authHandler *handler.AuthHandler, corsConfig config.CORSConfig) (
 	r.Use(custommiddleware.CORS(corsConfig))
 
 	// Rate limiting: 10 requests per second with burst of 20
-	rateLimiter := custommiddleware.NewRateLimiter(rate.Limit(10), 20)
+	rateLimiter := custommiddleware.NewRateLimiter(rate.Limit(10), 20, securityConfig.TrustProxy)
 	r.Use(rateLimiter.Middleware)
 
 	// Эндпоинты аутентификации

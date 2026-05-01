@@ -14,33 +14,39 @@ import (
 type AuthHandler struct {
 	useCase      port.AuthUseCase
 	tokenManager port.TokenManager
+	trustProxy   bool
 }
 
-func NewAuthHandler(useCase port.AuthUseCase, tokenManager port.TokenManager) *AuthHandler {
+func NewAuthHandler(useCase port.AuthUseCase, tokenManager port.TokenManager, trustProxy bool) *AuthHandler {
 	return &AuthHandler{
 		useCase:      useCase,
 		tokenManager: tokenManager,
+		trustProxy:   trustProxy,
 	}
 }
 
 // extractClientInfo extracts IP address and User-Agent from the request.
-// When behind a reverse proxy, it checks X-Forwarded-For and X-Real-IP headers.
-func extractClientInfo(r *http.Request) (ip, userAgent string) {
-	// Try X-Forwarded-For first (comma-separated list, first is client)
-	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-		if idx := strings.Index(xff, ","); idx != -1 {
-			ip = strings.TrimSpace(xff[:idx])
-		} else {
-			ip = strings.TrimSpace(xff)
+// When trustProxy is true and behind a reverse proxy, it checks X-Forwarded-For and X-Real-IP headers.
+// When trustProxy is false, only RemoteAddr is used to prevent IP spoofing.
+func extractClientInfo(r *http.Request, trustProxy bool) (ip, userAgent string) {
+	// Only trust proxy headers if explicitly configured
+	if trustProxy {
+		// Try X-Forwarded-For first (comma-separated list, first is client)
+		if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+			if idx := strings.Index(xff, ","); idx != -1 {
+				ip = strings.TrimSpace(xff[:idx])
+			} else {
+				ip = strings.TrimSpace(xff)
+			}
+		}
+
+		// Fallback to X-Real-IP
+		if ip == "" {
+			ip = r.Header.Get("X-Real-IP")
 		}
 	}
 
-	// Fallback to X-Real-IP
-	if ip == "" {
-		ip = r.Header.Get("X-Real-IP")
-	}
-
-	// Fallback to RemoteAddr
+	// Fallback to RemoteAddr (always used when trustProxy is false)
 	if ip == "" {
 		if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
 			ip = host
@@ -98,7 +104,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	req.IPAddress, req.UserAgent = extractClientInfo(r)
+	req.IPAddress, req.UserAgent = extractClientInfo(r, h.trustProxy)
 
 	resp, err := h.useCase.Register(r.Context(), req)
 	if err != nil {
@@ -123,7 +129,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	req.IPAddress, req.UserAgent = extractClientInfo(r)
+	req.IPAddress, req.UserAgent = extractClientInfo(r, h.trustProxy)
 
 	resp, err := h.useCase.Login(r.Context(), req)
 	if err != nil {
@@ -148,7 +154,7 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	req.IPAddress, req.UserAgent = extractClientInfo(r)
+	req.IPAddress, req.UserAgent = extractClientInfo(r, h.trustProxy)
 
 	resp, err := h.useCase.Refresh(r.Context(), req)
 	if err != nil {
@@ -173,7 +179,7 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	req.IPAddress, req.UserAgent = extractClientInfo(r)
+	req.IPAddress, req.UserAgent = extractClientInfo(r, h.trustProxy)
 
 	if err := h.useCase.Logout(r.Context(), req); err != nil {
 		SendError(w, err)

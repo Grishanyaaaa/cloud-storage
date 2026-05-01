@@ -77,8 +77,8 @@ func main() {
 	)
 
 	// 9. Инициализация презентации (HTTP)
-	authHandler := handler.NewAuthHandler(authUseCase, tokenManager)
-	router, rateLimiter := httpserver.NewRouter(authHandler, cfg.CORS)
+	authHandler := handler.NewAuthHandler(authUseCase, tokenManager, cfg.Security.TrustProxy)
+	router, rateLimiter := httpserver.NewRouter(authHandler, cfg.CORS, cfg.Security)
 	srv := httpserver.NewServer(cfg.Server, router)
 
 	// 10. Запуск сервера

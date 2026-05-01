@@ -18,23 +18,26 @@ type limiterEntry struct {
 
 // RateLimiter implements a simple in-memory rate limiter per IP address.
 type RateLimiter struct {
-	limiters map[string]*limiterEntry
-	mu       sync.RWMutex
-	rate     rate.Limit
-	burst    int
-	stopCh   chan struct{}
-	once     sync.Once
+	limiters   map[string]*limiterEntry
+	mu         sync.RWMutex
+	rate       rate.Limit
+	burst      int
+	trustProxy bool
+	stopCh     chan struct{}
+	once       sync.Once
 }
 
 // NewRateLimiter creates a new rate limiter.
 // rate: requests per second
 // burst: maximum burst size
-func NewRateLimiter(r rate.Limit, b int) *RateLimiter {
+// trustProxy: whether to trust X-Forwarded-For and X-Real-IP headers
+func NewRateLimiter(r rate.Limit, b int, trustProxy bool) *RateLimiter {
 	rl := &RateLimiter{
-		limiters: make(map[string]*limiterEntry),
-		rate:     r,
-		burst:    b,
-		stopCh:   make(chan struct{}),
+		limiters:   make(map[string]*limiterEntry),
+		rate:       r,
+		burst:      b,
+		trustProxy: trustProxy,
+		stopCh:     make(chan struct{}),
 	}
 	// Start cleanup goroutine once
 	go rl.cleanupLimiters()
@@ -70,22 +73,26 @@ func (rl *RateLimiter) getLimiter(ip string) *rate.Limiter {
 }
 
 // extractRealIP extracts the real client IP from the request.
-// When behind a reverse proxy, it checks X-Forwarded-For and X-Real-IP headers.
-func extractRealIP(r *http.Request) string {
-	// Try X-Forwarded-For first (comma-separated list, first is client)
-	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-		if idx := strings.Index(xff, ","); idx != -1 {
-			return strings.TrimSpace(xff[:idx])
+// When trustProxy is true and behind a reverse proxy, it checks X-Forwarded-For and X-Real-IP headers.
+// When trustProxy is false, only RemoteAddr is used to prevent IP spoofing.
+func extractRealIP(r *http.Request, trustProxy bool) string {
+	// Only trust proxy headers if explicitly configured
+	if trustProxy {
+		// Try X-Forwarded-For first (comma-separated list, first is client)
+		if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+			if idx := strings.Index(xff, ","); idx != -1 {
+				return strings.TrimSpace(xff[:idx])
+			}
+			return strings.TrimSpace(xff)
 		}
-		return strings.TrimSpace(xff)
+
+		// Fallback to X-Real-IP
+		if xri := r.Header.Get("X-Real-IP"); xri != "" {
+			return xri
+		}
 	}
 
-	// Fallback to X-Real-IP
-	if xri := r.Header.Get("X-Real-IP"); xri != "" {
-		return xri
-	}
-
-	// Fallback to RemoteAddr
+	// Fallback to RemoteAddr (always used when trustProxy is false)
 	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
 		return host
 	}
@@ -95,7 +102,7 @@ func extractRealIP(r *http.Request) string {
 // Middleware returns a middleware that rate limits requests per IP.
 func (rl *RateLimiter) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ip := extractRealIP(r)
+		ip := extractRealIP(r, rl.trustProxy)
 		limiter := rl.getLimiter(ip)
 
 		if !limiter.Allow() {
