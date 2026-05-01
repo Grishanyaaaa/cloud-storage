@@ -33,7 +33,7 @@ func main() {
 	defer stop()
 
 	// 3. Подключение к БД с timeout
-	dbCtx, dbCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	dbCtx, dbCancel := context.WithTimeout(ctx, 10*time.Second)
 	defer dbCancel()
 
 	pool, err := database.NewPostgresPool(dbCtx, cfg.Postgres)
