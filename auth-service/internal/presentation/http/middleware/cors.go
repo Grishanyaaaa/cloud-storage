@@ -15,7 +15,7 @@ func CORS(cfg config.CORSConfig) func(http.Handler) http.Handler {
 			origin := r.Header.Get("Origin")
 
 			// Проверяем разрешенные origins
-			if origin != "" && isOriginAllowed(origin, cfg.AllowOrigins) {
+			if origin != "" && isOriginAllowed(origin, cfg.AllowOrigins, cfg.AllowCredentials) {
 				w.Header().Set("Access-Control-Allow-Origin", origin)
 			}
 
@@ -40,9 +40,17 @@ func CORS(cfg config.CORSConfig) func(http.Handler) http.Handler {
 }
 
 // isOriginAllowed проверяет, разрешен ли origin
-func isOriginAllowed(origin string, allowedOrigins []string) bool {
+func isOriginAllowed(origin string, allowedOrigins []string, allowCredentials bool) bool {
 	for _, allowed := range allowedOrigins {
-		if allowed == "*" || allowed == origin {
+		// CORS spec violation: wildcard with credentials is not allowed
+		if allowed == "*" {
+			if allowCredentials {
+				// Reject wildcard when credentials are enabled
+				return false
+			}
+			return true
+		}
+		if allowed == origin {
 			return true
 		}
 	}
