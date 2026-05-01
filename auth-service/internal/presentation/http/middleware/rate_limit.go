@@ -1,7 +1,9 @@
 package middleware
 
 import (
+	"net"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -67,10 +69,33 @@ func (rl *RateLimiter) getLimiter(ip string) *rate.Limiter {
 	return entry.limiter
 }
 
+// extractRealIP extracts the real client IP from the request.
+// When behind a reverse proxy, it checks X-Forwarded-For and X-Real-IP headers.
+func extractRealIP(r *http.Request) string {
+	// Try X-Forwarded-For first (comma-separated list, first is client)
+	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+		if idx := strings.Index(xff, ","); idx != -1 {
+			return strings.TrimSpace(xff[:idx])
+		}
+		return strings.TrimSpace(xff)
+	}
+
+	// Fallback to X-Real-IP
+	if xri := r.Header.Get("X-Real-IP"); xri != "" {
+		return xri
+	}
+
+	// Fallback to RemoteAddr
+	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
+		return host
+	}
+	return r.RemoteAddr
+}
+
 // Middleware returns a middleware that rate limits requests per IP.
 func (rl *RateLimiter) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ip := r.RemoteAddr
+		ip := extractRealIP(r)
 		limiter := rl.getLimiter(ip)
 
 		if !limiter.Allow() {
