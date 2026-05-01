@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/application/dto"
 	"github.com/Grishanyaaaa/cloud-storage/auth-service/internal/application/port"
@@ -60,13 +61,27 @@ func extractClientInfo(r *http.Request) (ip, userAgent string) {
 
 	userAgent = r.UserAgent()
 	if len(userAgent) > 1024 {
-		userAgent = userAgent[:1024] // Truncate to prevent DoS via huge User-Agent
+		userAgent = truncateUTF8(userAgent, 1024) // Truncate safely without breaking UTF-8
 	}
 	if userAgent == "" {
 		userAgent = "unknown"
 	}
 
 	return ip, userAgent
+}
+
+// truncateUTF8 truncates a string to maxBytes without breaking UTF-8 encoding.
+func truncateUTF8(s string, maxBytes int) string {
+	if len(s) <= maxBytes {
+		return s
+	}
+	// Find the last valid UTF-8 rune boundary before maxBytes
+	for i := maxBytes; i > 0; i-- {
+		if utf8.RuneStart(s[i]) {
+			return s[:i]
+		}
+	}
+	return ""
 }
 
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
