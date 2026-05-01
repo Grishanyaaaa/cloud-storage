@@ -24,6 +24,25 @@ func (s *AuthService) Login(ctx context.Context, req dto.LoginRequest) (*dto.Tok
 
 	// 2. Поиск пользователя
 	user, err := s.userRepo.GetByEmail(ctx, email)
+
+	// 3. Prepare hash to compare (dummy hash if user not found to prevent timing attack)
+	// This ensures bcrypt.Compare always runs, making response time consistent
+	var hashToCompare string
+	if err == nil {
+		hashToCompare = user.PasswordHash()
+	} else {
+		// Pre-generated bcrypt hash with cost 10 (same as real passwords)
+		// This is a hash of "dummy-password-for-timing-attack-prevention"
+		hashToCompare = "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy"
+	}
+
+	// 4. Always perform password comparison to prevent timing attack
+	matches, compareErr := s.hasher.Compare(hashToCompare, req.Password)
+	if compareErr != nil {
+		return nil, fmt.Errorf("compare passwords: %w", compareErr)
+	}
+
+	// 5. Now check if user lookup failed or password doesn't match
 	if err != nil {
 		if domainerr.IsNotFound(err) {
 			return nil, domainerr.ErrInvalidCredentials
@@ -31,23 +50,18 @@ func (s *AuthService) Login(ctx context.Context, req dto.LoginRequest) (*dto.Tok
 		return nil, fmt.Errorf("get user by email: %w", err)
 	}
 
-	// 3. Проверка активности пользователя
-	if !user.CanLogin() {
-		return nil, domainerr.ErrUserInactive
-	}
-
-	// 4. Проверка пароля
-	matches, err := s.hasher.Compare(user.PasswordHash(), req.Password)
-	if err != nil {
-		return nil, fmt.Errorf("compare passwords: %w", err)
-	}
 	if !matches {
 		return nil, domainerr.ErrInvalidCredentials
 	}
 
+	// 6. Проверка активности пользователя
+	if !user.CanLogin() {
+		return nil, domainerr.ErrUserInactive
+	}
+
 	now := time.Now()
 
-	// 5. Генерация Access Token
+	// 7. Генерация Access Token
 	claims := port.TokenClaims{
 		UserID: user.ID().String(),
 		Email:  user.Email().String(),
@@ -57,13 +71,13 @@ func (s *AuthService) Login(ctx context.Context, req dto.LoginRequest) (*dto.Tok
 		return nil, fmt.Errorf("generate access token: %w", err)
 	}
 
-	// 6. Генерация Refresh Token
+	// 8. Генерация Refresh Token
 	refreshTokenRaw, err := s.tokenManager.GenerateRefreshToken()
 	if err != nil {
 		return nil, fmt.Errorf("generate refresh token: %w", err)
 	}
 
-	// 7. Атомарное обновление last_login и сохранение refresh token в транзакции
+	// 9. Атомарное обновление last_login и сохранение refresh token в транзакции
 	refreshTokenHash := s.tokenHasher.Hash(refreshTokenRaw)
 	expiresAt := now.Add(s.tokenManager.RefreshTokenTTL())
 
@@ -95,7 +109,7 @@ func (s *AuthService) Login(ctx context.Context, req dto.LoginRequest) (*dto.Tok
 		return nil, err
 	}
 
-	// 8. Лог аудита (вне транзакции, так как его сбой не критичен)
+	// 10. Лог аудита (вне транзакции, так как его сбой не критичен)
 	auditLog := entity.NewAuditLog(
 		valueobject.NewAuditLogID(),
 		user.ID(),
