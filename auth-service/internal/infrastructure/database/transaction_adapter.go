@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
@@ -33,11 +34,11 @@ func (a *pgxTransactionAdapter) Rollback(ctx context.Context) error {
 
 // unwrapTx extracts the underlying pgx.Tx from a Transaction interface.
 // This is used internally by repository implementations.
-// Panics if the transaction is not a pgxTransactionAdapter, which indicates
+// Returns an error if the transaction is not a pgxTransactionAdapter, which indicates
 // a programming error (wrong transaction type passed to repository method).
-func unwrapTx(tx repository.Transaction) pgx.Tx {
+func unwrapTx(tx repository.Transaction) (pgx.Tx, error) {
 	if adapter, ok := tx.(*pgxTransactionAdapter); ok {
-		return adapter.tx
+		return adapter.tx, nil
 	}
-	panic("transaction is not a pgxTransactionAdapter")
+	return nil, fmt.Errorf("transaction is not a pgxTransactionAdapter")
 }

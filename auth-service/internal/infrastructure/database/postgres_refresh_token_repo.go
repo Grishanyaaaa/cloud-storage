@@ -69,7 +69,10 @@ func (r *RefreshTokenRepositoryPg) SaveTx(ctx context.Context, tx repository.Tra
 		return fmt.Errorf("invalid ip address: %w", err)
 	}
 
-	pgxTx := unwrapTx(tx)
+	pgxTx, err := unwrapTx(tx)
+	if err != nil {
+		return fmt.Errorf("unwrap transaction: %w", err)
+	}
 	_, err = pgxTx.Exec(ctx, q,
 		token.ID().String(),
 		token.UserID().String(),
@@ -241,8 +244,11 @@ func (r *RefreshTokenRepositoryPg) RevokeByHashTx(ctx context.Context, tx reposi
 		wasRevokedAt *time.Time
 	)
 
-	pgxTx := unwrapTx(tx)
-	err := pgxTx.QueryRow(ctx, q, tokenHash, now).Scan(
+	pgxTx, err := unwrapTx(tx)
+	if err != nil {
+		return nil, nil, fmt.Errorf("unwrap transaction: %w", err)
+	}
+	err = pgxTx.QueryRow(ctx, q, tokenHash, now).Scan(
 		&id, &userID, &hash,
 		&expiresAt, &createdAt, &revokedAt,
 		&ipAddress, &userAgent, &wasRevokedAt,

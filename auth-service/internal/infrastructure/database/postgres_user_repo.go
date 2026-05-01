@@ -103,7 +103,10 @@ func (r *UserRepositoryPg) UpdateTx(ctx context.Context, tx repository.Transacti
 		SET email = $2, password_hash = $3, updated_at = $4, last_login = $5, is_active = $6
 		WHERE id = $1`
 
-	pgxTx := unwrapTx(tx)
+	pgxTx, err := unwrapTx(tx)
+	if err != nil {
+		return fmt.Errorf("unwrap transaction: %w", err)
+	}
 	tag, err := pgxTx.Exec(ctx, q,
 		user.ID().String(),
 		user.Email().String(),
