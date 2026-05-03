@@ -16,6 +16,14 @@ spec:
                 name: api-gateway
                 port:
                   number: 80
+          # Storage endpoints
+          - path: /storage
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway
+                port:
+                  number: 80
 
           # API endpoints - proxy to api-gateway
           - path: /api
