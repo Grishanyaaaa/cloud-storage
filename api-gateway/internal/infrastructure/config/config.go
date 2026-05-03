@@ -7,11 +7,12 @@ import (
 )
 
 type Config struct {
-	Env      string `env:"ENV" env-default:"local"`
-	Server   ServerConfig
-	AuthService AuthServiceConfig
-	JWT      JWTConfig
-	CORS     CORSConfig
+	Env            string `env:"ENV" env-default:"local"`
+	Server         ServerConfig
+	AuthService    AuthServiceConfig
+	StorageService StorageServiceConfig
+	JWT            JWTConfig
+	CORS           CORSConfig
 }
 
 func MustLoad() *Config {
