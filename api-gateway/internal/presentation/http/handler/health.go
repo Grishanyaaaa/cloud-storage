@@ -9,14 +9,16 @@ import (
 
 // HealthHandler handles health check endpoints.
 type HealthHandler struct {
-	authServiceURL string
-	httpClient     *http.Client
+	authServiceURL    string
+	storageServiceURL string
+	httpClient        *http.Client
 }
 
 // NewHealthHandler creates a new health handler.
-func NewHealthHandler(authServiceURL string) *HealthHandler {
+func NewHealthHandler(authServiceURL, storageServiceURL string) *HealthHandler {
 	return &HealthHandler{
-		authServiceURL: authServiceURL,
+		authServiceURL:    authServiceURL,
+		storageServiceURL: storageServiceURL,
 		httpClient: &http.Client{
 			Timeout: 5 * time.Second,
 		},
@@ -45,10 +47,15 @@ func (h *HealthHandler) Ready(w http.ResponseWriter, r *http.Request) {
 	services := make(map[string]string)
 	allHealthy := true
 
-	// Check auth-service
-	authStatus := h.checkAuthService(ctx)
+	authStatus := h.checkURL(ctx, h.authServiceURL+"/.well-known/jwks.json")
 	services["auth-service"] = authStatus
 	if authStatus != "healthy" {
+		allHealthy = false
+	}
+
+	storageStatus := h.checkURL(ctx, h.storageServiceURL+"/healthz")
+	services["storage-service"] = storageStatus
+	if storageStatus != "healthy" {
 		allHealthy = false
 	}
 
@@ -69,9 +76,9 @@ func (h *HealthHandler) Ready(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// checkAuthService checks if auth-service is healthy.
-func (h *HealthHandler) checkAuthService(ctx context.Context) string {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, h.authServiceURL+"/.well-known/jwks.json", nil)
+// checkURL performs an HTTP GET to the given URL and returns "healthy" on 200.
+func (h *HealthHandler) checkURL(ctx context.Context, url string) string {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return "unhealthy"
 	}
@@ -85,6 +92,5 @@ func (h *HealthHandler) checkAuthService(ctx context.Context) string {
 	if resp.StatusCode == http.StatusOK {
 		return "healthy"
 	}
-
 	return "unhealthy"
 }
