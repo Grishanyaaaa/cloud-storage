@@ -13,16 +13,18 @@ import (
 type ProxyHandler struct {
 	authServiceURL    string
 	storageServiceURL string
+	aiServiceURL      string
 	httpClient        *http.Client
 }
 
 // NewProxyHandler creates a new proxy handler.
-func NewProxyHandler(authServiceURL, storageServiceURL string) *ProxyHandler {
+func NewProxyHandler(authServiceURL, storageServiceURL, aiServiceURL string) *ProxyHandler {
 	return &ProxyHandler{
 		authServiceURL:    authServiceURL,
 		storageServiceURL: storageServiceURL,
+		aiServiceURL:      aiServiceURL,
 		httpClient: &http.Client{
-			Timeout: 30 * time.Second,
+			Timeout: 60 * time.Second,
 		},
 	}
 }
@@ -35,6 +37,11 @@ func (h *ProxyHandler) ProxyToAuthService(w http.ResponseWriter, r *http.Request
 // ProxyToStorageService forwards requests to storage-service.
 func (h *ProxyHandler) ProxyToStorageService(w http.ResponseWriter, r *http.Request) {
 	h.proxy(w, r, h.storageServiceURL)
+}
+
+// ProxyToAIService forwards requests to ai-service.
+func (h *ProxyHandler) ProxyToAIService(w http.ResponseWriter, r *http.Request) {
+	h.proxy(w, r, h.aiServiceURL)
 }
 
 // proxy is the shared reverse-proxy implementation.

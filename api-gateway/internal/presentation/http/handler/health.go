@@ -11,14 +11,16 @@ import (
 type HealthHandler struct {
 	authServiceURL    string
 	storageServiceURL string
+	aiServiceURL      string
 	httpClient        *http.Client
 }
 
 // NewHealthHandler creates a new health handler.
-func NewHealthHandler(authServiceURL, storageServiceURL string) *HealthHandler {
+func NewHealthHandler(authServiceURL, storageServiceURL, aiServiceURL string) *HealthHandler {
 	return &HealthHandler{
 		authServiceURL:    authServiceURL,
 		storageServiceURL: storageServiceURL,
+		aiServiceURL:      aiServiceURL,
 		httpClient: &http.Client{
 			Timeout: 5 * time.Second,
 		},
@@ -56,6 +58,12 @@ func (h *HealthHandler) Ready(w http.ResponseWriter, r *http.Request) {
 	storageStatus := h.checkURL(ctx, h.storageServiceURL+"/healthz")
 	services["storage-service"] = storageStatus
 	if storageStatus != "healthy" {
+		allHealthy = false
+	}
+
+	aiStatus := h.checkURL(ctx, h.aiServiceURL+"/healthz")
+	services["ai-service"] = aiStatus
+	if aiStatus != "healthy" {
 		allHealthy = false
 	}
 
