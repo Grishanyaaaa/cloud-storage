@@ -1,0 +1,35 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+bin/
+
+# Tests
+*.test
+*.out
+coverage.html
+
+# Vendored deps
+vendor/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+deployments/.env
+.env
+
+# Logs
+*.log
+
+# Local-only k8s secrets
+deployments/k8s/secret.yaml
