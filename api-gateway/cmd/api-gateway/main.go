@@ -47,8 +47,8 @@ func main() {
 	go jwksClient.StartBackgroundRefresh(ctx)
 
 	// 6. Инициализация handlers
-	proxyHandler := handler.NewProxyHandler(cfg.AuthService.URL, cfg.StorageService.URL)
-	healthHandler := handler.NewHealthHandler(cfg.AuthService.URL, cfg.StorageService.URL)
+	proxyHandler := handler.NewProxyHandler(cfg.AuthService.URL, cfg.StorageService.URL, cfg.AIService.URL)
+	healthHandler := handler.NewHealthHandler(cfg.AuthService.URL, cfg.StorageService.URL, cfg.AIService.URL)
 
 	// 7. Инициализация роутера
 	router, rateLimiter := httpserver.NewRouter(proxyHandler, healthHandler, jwksClient, cfg)

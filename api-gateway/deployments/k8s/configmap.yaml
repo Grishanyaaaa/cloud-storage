@@ -13,6 +13,7 @@ data:
 
   AUTH_SERVICE_URL: "http://auth-service"
   STORAGE_SERVICE_URL: "http://storage-service"
+  AI_SERVICE_URL: "http://ai-service"
 
   JWT_JWKS_URL: "http://auth-service/.well-known/jwks.json"
   JWT_JWKS_REFRESH_INTERVAL: "1h"

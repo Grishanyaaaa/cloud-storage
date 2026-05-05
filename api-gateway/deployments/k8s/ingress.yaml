@@ -25,6 +25,15 @@ spec:
                 port:
                   number: 80
 
+          # AI endpoints - proxy to api-gateway, which forwards to ai-service
+          - path: /ai
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway
+                port:
+                  number: 80
+
           # API endpoints - proxy to api-gateway
           - path: /api
             pathType: Prefix

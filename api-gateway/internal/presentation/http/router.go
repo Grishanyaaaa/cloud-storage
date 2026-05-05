@@ -97,5 +97,18 @@ func NewRouter(
 		r.Delete("/shares/{id}", proxyHandler.ProxyToStorageService)
 	})
 
+	// Protected ai-service routes - require JWT validation, proxy to ai-service.
+	// The user JWT is propagated to ai-service which then forwards it to storage-service.
+	r.Route("/ai/v1", func(r chi.Router) {
+		r.Use(custommiddleware.JWTAuth(jwksClient, cfg.JWT.Issuer, cfg.JWT.Audience))
+
+		r.Route("/commands", func(r chi.Router) {
+			r.Post("/", proxyHandler.ProxyToAIService)
+			r.Get("/{id}", proxyHandler.ProxyToAIService)
+			r.Post("/{id}/execute", proxyHandler.ProxyToAIService)
+			r.Post("/{id}/cancel", proxyHandler.ProxyToAIService)
+		})
+	})
+
 	return r, rateLimiter
 }
