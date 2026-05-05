@@ -11,6 +11,7 @@ type Config struct {
 	Server         ServerConfig
 	AuthService    AuthServiceConfig
 	StorageService StorageServiceConfig
+	AIService      AIServiceConfig
 	JWT            JWTConfig
 	CORS           CORSConfig
 }
