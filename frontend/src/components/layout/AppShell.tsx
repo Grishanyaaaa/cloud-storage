@@ -1,4 +1,5 @@
 import type { PropsWithChildren } from "react";
+import { AIModal } from "@/features/ai/AIModal";
 import { UploadPanel } from "@/features/files/upload/UploadPanel";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
@@ -22,6 +23,7 @@ export function AppShell({ children }: PropsWithChildren) {
         {children}
       </main>
       <UploadPanel />
+      <AIModal />
     </div>
   );
 }
