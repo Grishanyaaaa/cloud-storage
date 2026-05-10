@@ -1,4 +1,5 @@
 import type { PropsWithChildren } from "react";
+import { UploadPanel } from "@/features/files/upload/UploadPanel";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
 
@@ -20,6 +21,7 @@ export function AppShell({ children }: PropsWithChildren) {
       <main id="main" className="overflow-auto bg-bg-0">
         {children}
       </main>
+      <UploadPanel />
     </div>
   );
 }

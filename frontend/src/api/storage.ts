@@ -101,11 +101,11 @@ export async function restoreNode(id: string): Promise<NodeResponse> {
 
 /* ------------------------------ files ---------------------------- */
 
-export async function generateUploadURL(input: {
+export async function getUploadURL(input: {
   parent_id: string;
   name: string;
   size_bytes: number;
-  mime_type: string;
+  mime_type?: string;
 }): Promise<UploadURLResponse> {
   return apiFetch<UploadURLResponse>("/storage/v1/files/upload-url", {
     method: "POST",

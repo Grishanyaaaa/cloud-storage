@@ -25,5 +25,11 @@ export const env = {
     read("VITE_UPLOAD_PROGRESS_THROTTLE_MS", "200"),
     200,
   ),
+  // Per-file cap. Storage-service's hard cap is 5 GiB; we set a slightly
+  // smaller default to give a clearer client-side error before the round-trip.
+  UPLOAD_MAX_BYTES: Number.parseInt(
+    read("VITE_UPLOAD_MAX_BYTES", String(5 * 1024 * 1024 * 1024 - 1)),
+    10,
+  ),
   SHARE_BASE_URL: read("VITE_SHARE_BASE_URL", window.location.origin).replace(/\/+$/, ""),
 } as const;
