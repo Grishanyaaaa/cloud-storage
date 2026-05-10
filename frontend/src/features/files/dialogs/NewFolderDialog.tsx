@@ -21,7 +21,7 @@ const schema = z.object({
     .string()
     .min(1, "Имя не может быть пустым")
     .max(255, "Слишком длинное имя")
-    .refine((v) => !/[\\/\u0000]/.test(v), "Имя содержит запрещённые символы"),
+    .refine((v) => !v.includes("/") && !v.includes("\\") && !v.includes("\u0000"), "Имя содержит запрещённые символы"),
 });
 type Form = z.infer<typeof schema>;
 

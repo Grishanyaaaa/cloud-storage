@@ -7,9 +7,11 @@ interface ImportMetaEnv {
   readonly VITE_TREE_MAX_NODES: string;
   readonly VITE_UPLOAD_PARALLELISM: string;
   readonly VITE_UPLOAD_PROGRESS_THROTTLE_MS: string;
+  readonly VITE_UPLOAD_MAX_BYTES: string;
   readonly VITE_SHARE_BASE_URL: string;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
