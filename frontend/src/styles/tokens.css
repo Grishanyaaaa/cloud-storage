@@ -1,0 +1,46 @@
+/*
+ * Design tokens — Dropbox-look in dark theme.
+ * All UI colors and radii are derived from these CSS variables. Do not hard-code
+ * hex values in components; use Tailwind classes that map to these vars.
+ */
+:root {
+  /* Surfaces (depth 0..4) */
+  --bg-0: #0f1115;
+  --bg-1: #15171c;
+  --bg-2: #1b1e25;
+  --bg-3: #22262e;
+  --bg-4: #2a2f38;
+
+  /* Borders */
+  --border-1: #2a2f38;
+  --border-2: #3a4150;
+
+  /* Text */
+  --fg-1: #edeef1;
+  --fg-2: #a6acb8;
+  --fg-3: #6b7280;
+
+  /* Accent (Dropbox-like blue) */
+  --accent-1: #3b82f6;
+  --accent-1-hover: #2f6ad3;
+  --accent-1-pressed: #235ab2;
+  --accent-1-soft: rgba(59, 130, 246, 0.12);
+
+  /* Semantic */
+  --success: #34d399;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --danger-soft: rgba(239, 68, 68, 0.12);
+
+  /* Radii */
+  --radius-1: 6px;
+  --radius-2: 10px;
+  --radius-3: 14px;
+
+  /* Geometry */
+  --topbar-h: 56px;
+  --sidebar-w: 248px;
+  --row-h: 44px;
+
+  color-scheme: dark;
+}
