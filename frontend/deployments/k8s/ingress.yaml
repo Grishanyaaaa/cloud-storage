@@ -1,0 +1,22 @@
+# Standalone frontend ingress. Pairs with api-gateway's existing ingress
+# (which already routes /auth, /storage, /ai, /api, /.well-known) by handling
+# the catch-all root path on the same host. Apply both to a single host so
+# the SPA can talk to the gateway via same-origin (API_BASE_URL="").
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: frontend-ingress
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: api.cloud-storage.local
+      http:
+        paths:
+          # SPA — must be the LAST rule because it's a catch-all.
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 80
