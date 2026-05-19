@@ -5,9 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "routes:generate": "node ./scripts/generate-routes.mjs",
+    "build": "npm run routes:generate && tsc -b && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc -b --noEmit",
+    "typecheck": "npm run routes:generate && tsc -b --noEmit",
     "lint": "eslint . --ext .ts,.tsx --max-warnings 0",
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\""
