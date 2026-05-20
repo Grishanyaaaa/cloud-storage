@@ -25,6 +25,9 @@ function FilesPageInner() {
   const children = useChildren(folderId);
   const upload = useUploadActions(folderId);
 
+  // Debug: log folderId to verify it updates
+  console.log("[FilesPage] Current folderId:", folderId);
+
   return (
     <AppShell>
       <div className="flex flex-col h-full">

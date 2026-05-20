@@ -59,8 +59,12 @@ export async function runUpload({ entry }: RunUploadArgs): Promise<void> {
     await new Promise<void>((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       xhr.open(issued.method || "PUT", issued.url, true);
+      // Filter out unsafe headers that browsers block (Content-Length is set automatically by XHR).
+      const unsafeHeaders = new Set(["content-length", "host", "connection"]);
       for (const [k, v] of Object.entries(issued.headers ?? {})) {
-        xhr.setRequestHeader(k, v);
+        if (!unsafeHeaders.has(k.toLowerCase())) {
+          xhr.setRequestHeader(k, v);
+        }
       }
       xhr.upload.onprogress = (ev) => {
         if (ev.lengthComputable) {

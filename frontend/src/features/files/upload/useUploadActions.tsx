@@ -20,6 +20,7 @@ import { ensureUploadQueueStarted } from "./uploadQueue";
 export function useUploadActions(parentId: string) {
   const queryClient = useQueryClient();
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const enqueueFilesRef = useRef<(files: FileList | File[]) => void>();
   const [dragOver, setDragOver] = useState(false);
   const dragCounterRef = useRef(0);
 
@@ -78,6 +79,9 @@ export function useUploadActions(parentId: string) {
     [parentId],
   );
 
+  // Keep ref updated so event listener always uses current version
+  enqueueFilesRef.current = enqueueFiles;
+
   const openFilePicker = useCallback(() => {
     let el = inputRef.current;
     if (!el) {
@@ -86,14 +90,16 @@ export function useUploadActions(parentId: string) {
       el.multiple = true;
       el.style.display = "none";
       el.addEventListener("change", () => {
-        if (el && el.files) enqueueFiles(el.files);
+        if (el && el.files && enqueueFilesRef.current) {
+          enqueueFilesRef.current(el.files);
+        }
       });
       document.body.appendChild(el);
       inputRef.current = el;
     }
     el.value = "";
     el.click();
-  }, [enqueueFiles]);
+  }, []);
 
   const onDragEnter = useCallback((e: DragEvent) => {
     e.preventDefault();

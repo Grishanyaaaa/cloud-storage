@@ -27,6 +27,7 @@ import { ApiError, type NodeResponse, type ShareResponse, type SharePermission }
 import { qk } from "../queryKeys";
 import { rewriteShareUrl } from "@/lib/format";
 import { env } from "@/lib/env";
+import { cn } from "@/lib/cn";
 
 interface Props {
   node: NodeResponse;
@@ -38,12 +39,6 @@ export function ShareDialog({ node, open, onOpenChange }: Props) {
   const queryClient = useQueryClient();
   const [permission, setPermission] = useState<SharePermission>("view");
   const [expiresIn, setExpiresIn] = useState<string>("never");
-
-  const sharesQuery = useQuery({
-    queryKey: qk.shares(node.id, false),
-    queryFn: () => listShares(node.id, false),
-    enabled: open,
-  });
 
   const create = useMutation({
     mutationFn: () =>
@@ -63,7 +58,17 @@ export function ShareDialog({ node, open, onOpenChange }: Props) {
       } else {
         toast.success("Ссылка создана");
       }
-      void queryClient.invalidateQueries({ queryKey: qk.shares(node.id, false) });
+      // Add the new share to the cache instead of invalidating, so we keep the token
+      const key = qk.shares(node.id, false);
+      queryClient.setQueryData(
+        key,
+        (old: { items: ShareResponse[] } | undefined) => {
+          const updated = { items: [created, ...(old?.items ?? [])] };
+          // Debug: show token in toast
+          toast.info(`Token: ${created.token ? "есть" : "нет"}, Items: ${updated.items.length}`);
+          return updated;
+        }
+      );
     },
     onError: (err) => {
       const msg = err instanceof ApiError ? err.message : "Не удалось создать ссылку";
@@ -71,11 +76,24 @@ export function ShareDialog({ node, open, onOpenChange }: Props) {
     },
   });
 
+  const sharesQuery = useQuery({
+    queryKey: qk.shares(node.id, false),
+    queryFn: () => listShares(node.id, false),
+    enabled: open && !create.isPending, // Don't refetch while creating
+    refetchOnWindowFocus: false,
+  });
+
   const revoke = useMutation({
     mutationFn: (shareId: string) => revokeShare(shareId),
-    onSuccess: () => {
+    onSuccess: (_, shareId) => {
       toast.success("Ссылка отозвана");
-      void queryClient.invalidateQueries({ queryKey: qk.shares(node.id, false) });
+      // Remove the revoked share from cache
+      queryClient.setQueryData(
+        qk.shares(node.id, false),
+        (old: { items: ShareResponse[] } | undefined) => ({
+          items: (old?.items ?? []).filter((s) => s.id !== shareId),
+        })
+      );
     },
     onError: (err) => {
       toast.error(err instanceof ApiError ? err.message : "Не удалось отозвать");
@@ -196,15 +214,24 @@ interface ShareRowProps {
 
 function ShareRow({ share, onCopy, onRevoke, isRevoking }: ShareRowProps) {
   // The token is only included on Create — for previously-existing shares
-  // we fall back to displaying the rewritten URL if the server provides one.
+  // we cannot reconstruct the URL (token is hashed in DB).
   const display = share.token
     ? rewriteShareUrl(share.url ?? "", share.token, env.SHARE_BASE_URL)
-    : share.url ?? "—";
+    : "Ссылка доступна только при создании";
+
+  const canCopy = !!share.token;
 
   return (
     <li className="flex items-center gap-2 px-3 py-2">
       <div className="flex-1 min-w-0">
-        <Input readOnly value={display} className="text-[12px] h-8" />
+        <Input
+          readOnly
+          value={display}
+          className={cn(
+            "text-[12px] h-8",
+            !canCopy && "text-fg-3 italic"
+          )}
+        />
         <div className="text-[11px] text-fg-3 mt-1">
           {share.permission === "edit" ? "Редактирование" : "Только просмотр"}
           {share.expires_at && ` · до ${new Date(share.expires_at).toLocaleString("ru-RU")}`}
@@ -215,7 +242,7 @@ function ShareRow({ share, onCopy, onRevoke, isRevoking }: ShareRowProps) {
         size="icon"
         aria-label="Скопировать"
         onClick={onCopy}
-        disabled={display === "—"}
+        disabled={!canCopy}
       >
         <Copy className="h-4 w-4" />
       </Button>

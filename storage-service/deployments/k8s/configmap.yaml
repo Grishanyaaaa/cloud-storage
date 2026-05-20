@@ -26,7 +26,7 @@ data:
   JWT_AUDIENCE: "cloud-storage"
 
   S3_REGION: "ru-central1"
-  S3_BUCKET: "cloud-storage-files"
+  S3_BUCKET: "cloud-storage-files-2588259"
   S3_USE_PATH_STYLE: "true"
 
   STORAGE_MAX_FILE_SIZE_BYTES: "5368709120"

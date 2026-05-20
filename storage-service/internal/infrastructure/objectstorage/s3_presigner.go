@@ -17,21 +17,23 @@ import (
 var _ port.ObjectStorage = (*S3Client)(nil)
 
 // PresignUpload generates a single pre-signed PUT URL for direct upload to S3.
-// The client MUST send Content-Length and Content-Type matching what we signed.
+// Content-Length is NOT signed because browsers block it as an unsafe header.
+// The browser sets Content-Length automatically when sending the request body.
 func (c *S3Client) PresignUpload(ctx context.Context, in port.PresignUploadInput) (*port.PresignedURL, error) {
 	now := time.Now()
 	put, err := c.presigner.PresignPutObject(ctx, &s3.PutObjectInput{
-		Bucket:        aws.String(c.bucket),
-		Key:           aws.String(in.Key.String()),
-		ContentType:   aws.String(in.MimeType.String()),
-		ContentLength: aws.Int64(in.SizeBytes),
+		Bucket:      aws.String(c.bucket),
+		Key:         aws.String(in.Key.String()),
+		ContentType: aws.String(in.MimeType.String()),
+		// ContentLength is intentionally omitted from presigning to avoid signature mismatch.
+		// Browsers automatically set Content-Length but block manual setting via XHR.
 	}, s3.WithPresignExpires(in.TTL))
 	if err != nil {
 		return nil, fmt.Errorf("presign put: %w", err)
 	}
 	headers := map[string]string{
-		"Content-Type":   in.MimeType.String(),
-		"Content-Length": fmt.Sprintf("%d", in.SizeBytes),
+		"Content-Type": in.MimeType.String(),
+		// Content-Length is omitted — browser sets it automatically
 	}
 	return &port.PresignedURL{
 		URL:       put.URL,
