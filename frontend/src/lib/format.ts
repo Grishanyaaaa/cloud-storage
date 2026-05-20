@@ -72,12 +72,13 @@ export function formatRelativeTime(input: string | Date | null | undefined): str
 }
 
 /**
- * The storage-service returns share URLs pointing at the API gateway (e.g.
- * `https://api.cloud-storage.local/storage/v1/public/<token>`). The frontend
- * substitutes that with its own `/share/<token>` URL when the user copies a
- * share link, so it lands on the SPA rather than on the JSON API.
+ * Build the SPA-facing share URL (`<frontendBase>/share/<token>`) from a raw
+ * share token. The storage-service returns its own URL pointing at the API
+ * gateway (`/storage/v1/public/<token>`), which is the JSON endpoint — not
+ * something a recipient should ever open in a browser. The owner always
+ * needs the SPA route instead, so we ignore the server URL entirely.
  */
-export function rewriteShareUrl(serverUrl: string, token: string, frontendBase: string): string {
-  if (!serverUrl || !token) return serverUrl;
-  return `${frontendBase.replace(/\/+$/, "")}/share/${token}`;
+export function rewriteShareUrl(token: string, frontendBase: string): string {
+  if (!token) return "";
+  return `${frontendBase.replace(/\/+$/, "")}/share/${encodeURIComponent(token)}`;
 }

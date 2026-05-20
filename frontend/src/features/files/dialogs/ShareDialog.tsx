@@ -28,6 +28,7 @@ import { qk } from "../queryKeys";
 import { rewriteShareUrl } from "@/lib/format";
 import { env } from "@/lib/env";
 import { cn } from "@/lib/cn";
+import { shareTokenCache } from "./shareTokenCache";
 
 interface Props {
   node: NodeResponse;
@@ -47,27 +48,23 @@ export function ShareDialog({ node, open, onOpenChange }: Props) {
         ...(expiresIn !== "never" && { expires_in: expiresIn }),
       }),
     onSuccess: async (created) => {
-      // Returned `url` is the API-gateway public-share URL. Rewrite to the
-      // frontend-served /share/{token} so the link points at the SPA.
-      const link = created.token
-        ? rewriteShareUrl(created.url ?? "", created.token, env.SHARE_BASE_URL)
-        : created.url ?? "";
+      // Remember the raw token outside of the query cache so it survives
+      // background refetches and dialog re-opens.
+      if (created.token) {
+        shareTokenCache.set(created.id, created.token);
+      }
+      const link = buildShareLink(created.token);
       if (link) {
         await copyToClipboard(link);
         toast.success("Ссылка создана и скопирована");
       } else {
         toast.success("Ссылка создана");
       }
-      // Add the new share to the cache instead of invalidating, so we keep the token
-      const key = qk.shares(node.id, false);
       queryClient.setQueryData(
-        key,
-        (old: { items: ShareResponse[] } | undefined) => {
-          const updated = { items: [created, ...(old?.items ?? [])] };
-          // Debug: show token in toast
-          toast.info(`Token: ${created.token ? "есть" : "нет"}, Items: ${updated.items.length}`);
-          return updated;
-        }
+        qk.shares(node.id, false),
+        (old: { items: ShareResponse[] } | undefined) => ({
+          items: [created, ...(old?.items ?? [])],
+        }),
       );
     },
     onError: (err) => {
@@ -79,20 +76,20 @@ export function ShareDialog({ node, open, onOpenChange }: Props) {
   const sharesQuery = useQuery({
     queryKey: qk.shares(node.id, false),
     queryFn: () => listShares(node.id, false),
-    enabled: open && !create.isPending, // Don't refetch while creating
+    enabled: open,
     refetchOnWindowFocus: false,
   });
 
   const revoke = useMutation({
     mutationFn: (shareId: string) => revokeShare(shareId),
     onSuccess: (_, shareId) => {
+      shareTokenCache.remove(shareId);
       toast.success("Ссылка отозвана");
-      // Remove the revoked share from cache
       queryClient.setQueryData(
         qk.shares(node.id, false),
         (old: { items: ShareResponse[] } | undefined) => ({
           items: (old?.items ?? []).filter((s) => s.id !== shareId),
-        })
+        }),
       );
     },
     onError: (err) => {
@@ -171,9 +168,8 @@ export function ShareDialog({ node, open, onOpenChange }: Props) {
                   key={share.id}
                   share={share}
                   onCopy={async () => {
-                    const link = share.token
-                      ? rewriteShareUrl(share.url ?? "", share.token, env.SHARE_BASE_URL)
-                      : share.url ?? "";
+                    const token = resolveShareToken(share);
+                    const link = buildShareLink(token);
                     if (link) {
                       await copyToClipboard(link);
                       toast.success("Скопировано");
@@ -213,13 +209,14 @@ interface ShareRowProps {
 }
 
 function ShareRow({ share, onCopy, onRevoke, isRevoking }: ShareRowProps) {
-  // The token is only included on Create — for previously-existing shares
-  // we cannot reconstruct the URL (token is hashed in DB).
-  const display = share.token
-    ? rewriteShareUrl(share.url ?? "", share.token, env.SHARE_BASE_URL)
-    : "Ссылка доступна только при создании";
-
-  const canCopy = !!share.token;
+  // The raw token is returned only by Create. We additionally keep a per-tab
+  // cache so the URL stays visible across refetches and reloads. If the share
+  // was created in a previous tab/session the token is unrecoverable — the
+  // owner has to revoke and create a new one.
+  const token = resolveShareToken(share);
+  const link = buildShareLink(token);
+  const canCopy = link.length > 0;
+  const display = canCopy ? link : "Ссылка доступна только при создании";
 
   return (
     <li className="flex items-center gap-2 px-3 py-2">
@@ -257,6 +254,15 @@ function ShareRow({ share, onCopy, onRevoke, isRevoking }: ShareRowProps) {
       </Button>
     </li>
   );
+}
+
+function resolveShareToken(share: ShareResponse): string | undefined {
+  return share.token ?? shareTokenCache.get(share.id);
+}
+
+function buildShareLink(token: string | undefined): string {
+  if (!token) return "";
+  return rewriteShareUrl(token, env.SHARE_BASE_URL);
 }
 
 async function copyToClipboard(text: string): Promise<void> {
