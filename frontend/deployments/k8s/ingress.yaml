@@ -9,7 +9,7 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-    - host: api.cloud-storage.local
+    - host: cloud-storage.local
       http:
         paths:
           # SPA — must be the LAST rule because it's a catch-all.

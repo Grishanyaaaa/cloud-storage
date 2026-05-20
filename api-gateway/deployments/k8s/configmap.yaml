@@ -20,7 +20,7 @@ data:
   JWT_ISSUER: "auth-service"
   JWT_AUDIENCE: "cloud-storage"
 
-  CORS_ALLOW_ORIGINS: "*"
+  CORS_ALLOW_ORIGINS: "http://cloud-storage.local"
   CORS_ALLOW_METHODS: "GET,POST,PUT,PATCH,DELETE,OPTIONS"
   CORS_ALLOW_HEADERS: "Content-Type,Authorization"
   CORS_ALLOW_CREDENTIALS: "false"

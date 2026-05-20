@@ -9,5 +9,5 @@ data:
   # API_BASE_URL = root URL of the api-gateway (with scheme).
   # Empty string => use same-origin (works when ingress routes /auth, /storage,
   # /ai to the gateway from the same host as the SPA).
-  API_BASE_URL: ""
-  SHARE_BASE_URL: ""
+  API_BASE_URL: "http://api.cloud-storage.local"
+  SHARE_BASE_URL: "http://cloud-storage.local"
