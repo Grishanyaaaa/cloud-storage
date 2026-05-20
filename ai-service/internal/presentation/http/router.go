@@ -42,7 +42,7 @@ func NewRouter(
 	r.Use(chimiddleware.Logger)
 	r.Use(chimiddleware.Recoverer)
 	r.Use(chimiddleware.CleanPath)
-	r.Use(custommiddleware.CORS(corsCfg))
+	// CORS is handled by api-gateway, no need for it here
 
 	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)

@@ -13,9 +13,9 @@ data:
   SERVER_SHUTDOWN_TIMEOUT: "30s"
   SERVER_TRUST_PROXY: "false"
 
-  POSTGRES_HOST: "postgres"
+  POSTGRES_HOST: "176.109.110.29"
   POSTGRES_PORT: "5432"
-  POSTGRES_USER: "admin"
+  POSTGRES_USER: "postgres"
   POSTGRES_DB: "aidb"
   POSTGRES_SSLMODE: "disable"
   POSTGRES_MAX_OPEN_CONNS: "25"
@@ -31,7 +31,7 @@ data:
   STORAGE_SERVICE_TREE_MAX_NODES: "500"
 
   YANDEX_GPT_MODEL: "yandexgpt/latest"
-  YANDEX_GPT_ENDPOINT: "https://llm.api.cloud.yandex.net/foundationModels/v1/completion"
+  YANDEX_GPT_ENDPOINT: "https://ai.api.cloud.yandex.net/v1/responses"
   YANDEX_GPT_TIMEOUT: "60s"
   YANDEX_GPT_TEMPERATURE: "0.1"
   YANDEX_GPT_MAX_TOKENS: "2000"

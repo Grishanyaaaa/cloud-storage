@@ -49,6 +49,8 @@ export function useUploadActions(parentId: string) {
     (files: FileList | File[]) => {
       const arr = Array.from(files);
       const add = useUploadsStore.getState().add;
+      // Debug: log parentId to verify it's correct
+      console.log("[useUploadActions] enqueueFiles called with parentId:", parentId, "files:", arr.length);
       for (const file of arr) {
         if (file.size > env.UPLOAD_MAX_BYTES) {
           add({

@@ -1,13 +1,12 @@
 // Package llm provides adapters to remote LLM providers.
 //
 // YandexGPTClient implements port.LLMClient against Yandex Cloud's
-// Foundation Models API.
+// Foundation Models API v1/responses.
 //
-//	Endpoint:    https://llm.api.cloud.yandex.net/foundationModels/v1/completion
-//	Auth:        header "Authorization: Api-Key <key>" + "x-folder-id: <folder>"
-//	JSON Schema: completion option `responseFormat.jsonSchema.schema`
-//	Token usage: parsed from `result.usage.{inputTextTokens, completionTokens}`
-//	Output:      text in `result.alternatives[0].message.text`
+//	Endpoint:    https://ai.api.cloud.yandex.net/v1/responses
+//	Auth:        header "Authorization: Api-Key <key>" + "OpenAI-Project: <folder>"
+//	JSON Schema: response_format.json_schema
+//	Output:      text in `output[0].content[0].text`
 package llm
 
 import (
@@ -44,56 +43,35 @@ func NewYandexGPTClient(cfg config.YandexGPTConfig) *YandexGPTClient {
 	}
 }
 
-// ---------- request shape (Yandex API) ----------
+// ---------- request shape (Yandex API v1/responses) ----------
 
 type yandexCompletionRequest struct {
-	ModelURI          string                       `json:"modelUri"`
-	CompletionOptions yandexCompletionOptions      `json:"completionOptions"`
-	Messages          []yandexMessage              `json:"messages"`
-	JSONSchema        *yandexJSONSchemaWrapper     `json:"jsonSchema,omitempty"`
+	Model           string             `json:"model"`
+	Temperature     float64            `json:"temperature"`
+	Instructions    string             `json:"instructions"`
+	Input           string             `json:"input"`
+	MaxOutputTokens int                `json:"max_output_tokens"`
+	ResponseFormat  *yandexResponseFormat `json:"response_format,omitempty"`
 }
 
-type yandexCompletionOptions struct {
-	Stream      bool    `json:"stream"`
-	Temperature float64 `json:"temperature"`
-	MaxTokens   string  `json:"maxTokens"`
+type yandexResponseFormat struct {
+	Type       string         `json:"type"` // "json_schema"
+	JSONSchema map[string]any `json:"json_schema,omitempty"`
 }
 
-type yandexMessage struct {
-	Role string `json:"role"` // "system" | "user" | "assistant"
-	Text string `json:"text"`
-}
-
-// yandexJSONSchemaWrapper is the preferred way to enforce structured output
-// in the Foundation Models REST API:
-//
-//	"jsonSchema": { "schema": { ... } }
-type yandexJSONSchemaWrapper struct {
-	Schema map[string]any `json:"schema"`
-}
-
-// ---------- response shape (Yandex API) ----------
+// ---------- response shape (Yandex API v1/responses) ----------
 
 type yandexCompletionResponse struct {
-	Result yandexResult `json:"result"`
-	Error  *yandexError `json:"error,omitempty"`
+	Output []yandexOutput `json:"output"`
+	Error  *yandexError   `json:"error,omitempty"`
 }
 
-type yandexResult struct {
-	Alternatives []yandexAlternative `json:"alternatives"`
-	Usage        yandexUsage         `json:"usage"`
-	ModelVersion string              `json:"modelVersion"`
+type yandexOutput struct {
+	Content []yandexContent `json:"content"`
 }
 
-type yandexAlternative struct {
-	Message yandexMessage `json:"message"`
-	Status  string        `json:"status"`
-}
-
-type yandexUsage struct {
-	InputTextTokens  string `json:"inputTextTokens"`
-	CompletionTokens string `json:"completionTokens"`
-	TotalTokens      string `json:"totalTokens"`
+type yandexContent struct {
+	Text string `json:"text"`
 }
 
 type yandexError struct {
@@ -114,20 +92,22 @@ func (c *YandexGPTClient) Complete(ctx context.Context, req port.LLMRequest) (po
 		maxTokens = c.cfg.MaxTokens
 	}
 
+	// Combine system prompt and user message into instructions and input
+	instructions := req.SystemPrompt
+	input := req.UserMessage
+
 	body := yandexCompletionRequest{
-		ModelURI: c.cfg.EffectiveModelURI(),
-		CompletionOptions: yandexCompletionOptions{
-			Stream:      false,
-			Temperature: temperature,
-			MaxTokens:   strconv.Itoa(maxTokens),
-		},
-		Messages: []yandexMessage{
-			{Role: "system", Text: req.SystemPrompt},
-			{Role: "user", Text: req.UserMessage},
-		},
+		Model:           c.cfg.EffectiveModelURI(),
+		Temperature:     temperature,
+		Instructions:    instructions,
+		Input:           input,
+		MaxOutputTokens: maxTokens,
 	}
 	if req.JSONSchema != nil {
-		body.JSONSchema = &yandexJSONSchemaWrapper{Schema: req.JSONSchema}
+		body.ResponseFormat = &yandexResponseFormat{
+			Type:       "json_schema",
+			JSONSchema: req.JSONSchema,
+		}
 	}
 
 	payload, err := json.Marshal(body)
@@ -141,7 +121,7 @@ func (c *YandexGPTClient) Complete(ctx context.Context, req port.LLMRequest) (po
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Authorization", "Api-Key "+c.cfg.APIKey)
-	httpReq.Header.Set("x-folder-id", c.cfg.FolderID)
+	httpReq.Header.Set("OpenAI-Project", c.cfg.FolderID)
 
 	resp, err := c.http.Do(httpReq)
 	if err != nil {
@@ -170,6 +150,9 @@ func (c *YandexGPTClient) Complete(ctx context.Context, req port.LLMRequest) (po
 		)
 	}
 
+	// Debug: log raw response
+	fmt.Printf("[DEBUG] Yandex GPT raw response: %s\n", string(respBody))
+
 	var parsed yandexCompletionResponse
 	if err := json.Unmarshal(respBody, &parsed); err != nil {
 		return port.LLMResponse{}, domainerr.New(
@@ -185,16 +168,16 @@ func (c *YandexGPTClient) Complete(ctx context.Context, req port.LLMRequest) (po
 			nil,
 		)
 	}
-	if len(parsed.Result.Alternatives) == 0 {
+	if len(parsed.Output) == 0 || len(parsed.Output[0].Content) == 0 {
 		return port.LLMResponse{}, domainerr.ErrLLMInvalidResponse
 	}
-	text := parsed.Result.Alternatives[0].Message.Text
+	text := parsed.Output[0].Content[0].Text
 
 	return port.LLMResponse{
 		Text:      text,
-		Model:     parsed.Result.ModelVersion,
-		TokensIn:  parseIntOrZero(parsed.Result.Usage.InputTextTokens),
-		TokensOut: parseIntOrZero(parsed.Result.Usage.CompletionTokens),
+		Model:     c.cfg.Model,
+		TokensIn:  0, // v1/responses API doesn't return token usage
+		TokensOut: 0,
 	}, nil
 }
 
