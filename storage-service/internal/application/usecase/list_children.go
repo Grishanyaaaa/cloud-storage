@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/Grishanyaaaa/cloud-storage/storage-service/internal/application/dto"
 	"github.com/Grishanyaaaa/cloud-storage/storage-service/internal/application/port"
@@ -42,12 +43,24 @@ func (s *StorageService) ListChildren(ctx context.Context, actor *port.Actor, re
 	if err != nil {
 		return nil, err
 	}
+	// Collect file node IDs so we can batch-load their blobs.
+	var fileIDs []valueobject.NodeID
+	for _, n := range items {
+		if n.IsFile() {
+			fileIDs = append(fileIDs, n.ID())
+		}
+	}
+	blobMap, err := s.blobRepo.GetByNodeIDs(ctx, fileIDs)
+	if err != nil {
+		return nil, fmt.Errorf("load file blobs: %w", err)
+	}
+
 	resp := &dto.ListChildrenResponse{
 		Items:      make([]dto.NodeResponse, 0, len(items)),
 		NextCursor: next,
 	}
 	for _, n := range items {
-		resp.Items = append(resp.Items, *toNodeResponse(n, nil))
+		resp.Items = append(resp.Items, *toNodeResponse(n, blobMap[n.ID()]))
 	}
 	return resp, nil
 }

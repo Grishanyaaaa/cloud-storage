@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/Grishanyaaaa/cloud-storage/storage-service/internal/application/dto"
 	"github.com/Grishanyaaaa/cloud-storage/storage-service/internal/application/port"
@@ -56,11 +57,24 @@ func (s *StorageService) GetTree(ctx context.Context, actor *port.Actor, req dto
 	if err != nil {
 		return nil, err
 	}
-	return buildTree(root, nodes), nil
+
+	// Batch-load blobs for file nodes so the tree response includes size/mime.
+	var fileIDs []valueobject.NodeID
+	for _, n := range nodes {
+		if n.IsFile() {
+			fileIDs = append(fileIDs, n.ID())
+		}
+	}
+	blobMap, err := s.blobRepo.GetByNodeIDs(ctx, fileIDs)
+	if err != nil {
+		return nil, fmt.Errorf("load file blobs for tree: %w", err)
+	}
+
+	return buildTree(root, nodes, blobMap), nil
 }
 
 // buildTree assembles a tree from a flat list (root first, then descendants).
-func buildTree(root *entity.Node, nodes []*entity.Node) *dto.TreeNodeResponse {
+func buildTree(root *entity.Node, nodes []*entity.Node, blobMap map[valueobject.NodeID]*entity.FileBlob) *dto.TreeNodeResponse {
 	byParent := map[string][]*entity.Node{}
 	rootKey := root.ID().String()
 	var rootNode *entity.Node
@@ -80,7 +94,7 @@ func buildTree(root *entity.Node, nodes []*entity.Node) *dto.TreeNodeResponse {
 
 	var build func(n *entity.Node) dto.TreeNodeResponse
 	build = func(n *entity.Node) dto.TreeNodeResponse {
-		resp := dto.TreeNodeResponse{NodeResponse: *toNodeResponse(n, nil)}
+		resp := dto.TreeNodeResponse{NodeResponse: *toNodeResponse(n, blobMap[n.ID()])}
 		for _, child := range byParent[n.ID().String()] {
 			resp.Children = append(resp.Children, build(child))
 		}
