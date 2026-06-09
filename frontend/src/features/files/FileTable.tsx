@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { MoreHorizontal, Trash2, Pencil, Move, Share2, Download, RotateCcw } from "lucide-react";
+import { MoreHorizontal, Trash2, Pencil, Move, Share2, Download, RotateCcw, ArrowUp, ArrowDown } from "lucide-react";
 import { useState } from "react";
 import {
   DropdownMenu,
@@ -13,6 +13,7 @@ import type { NodeResponse } from "@/api/types";
 import { cn } from "@/lib/cn";
 import { formatBytes, formatRelativeTime } from "@/lib/format";
 import { iconForNode } from "@/lib/mime";
+import type { SortField, SortDir } from "./useFileFilters";
 import { RenameDialog } from "./dialogs/RenameDialog";
 import { DeleteDialog } from "./dialogs/DeleteDialog";
 import { MoveDialog } from "./dialogs/MoveDialog";
@@ -25,9 +26,12 @@ interface Props {
   isLoading: boolean;
   isError: boolean;
   emptyMessage?: string;
+  sortField?: SortField;
+  sortDir?: SortDir;
+  onSort?: (field: SortField) => void;
 }
 
-export function FileTable({ items, isLoading, isError, emptyMessage }: Props) {
+export function FileTable({ items, isLoading, isError, emptyMessage, sortField, sortDir, onSort }: Props) {
   if (isLoading) return <FileTableSkeleton />;
   if (isError) {
     return (
@@ -55,9 +59,9 @@ export function FileTable({ items, isLoading, isError, emptyMessage }: Props) {
           role="row"
           className="grid grid-cols-[1fr_140px_180px_44px] items-center gap-3 px-4 h-9 text-[12px] uppercase tracking-wider text-fg-3 border-b border-border-1"
         >
-          <div role="columnheader">Имя</div>
-          <div role="columnheader">Размер</div>
-          <div role="columnheader">Изменён</div>
+          <SortableHeader field="name" label="Имя" sortField={sortField} sortDir={sortDir} onSort={onSort} />
+          <SortableHeader field="size" label="Размер" sortField={sortField} sortDir={sortDir} onSort={onSort} />
+          <SortableHeader field="updated_at" label="Изменён" sortField={sortField} sortDir={sortDir} onSort={onSort} />
           <div role="columnheader" />
         </div>
         {items.map((node) => (
@@ -65,6 +69,41 @@ export function FileTable({ items, isLoading, isError, emptyMessage }: Props) {
         ))}
       </div>
     </div>
+  );
+}
+
+interface SortableHeaderProps {
+  field: SortField;
+  label: string;
+  sortField?: SortField;
+  sortDir?: SortDir;
+  onSort?: (field: SortField) => void;
+}
+
+function SortableHeader({ field, label, sortField, sortDir, onSort }: SortableHeaderProps) {
+  const isActive = sortField === field;
+  const Icon = isActive && sortDir === "desc" ? ArrowDown : ArrowUp;
+
+  if (!onSort) {
+    return <div role="columnheader">{label}</div>;
+  }
+
+  return (
+    <button
+      type="button"
+      role="columnheader"
+      aria-sort={isActive ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
+      className="flex items-center gap-1 cursor-pointer select-none hover:text-fg-1 transition-colors"
+      onClick={() => onSort(field)}
+    >
+      {label}
+      <Icon
+        className={cn(
+          "h-3 w-3 transition-opacity",
+          isActive ? "opacity-100 text-fg-1" : "opacity-0",
+        )}
+      />
+    </button>
   );
 }
 

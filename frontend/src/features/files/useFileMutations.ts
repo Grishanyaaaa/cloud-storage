@@ -71,28 +71,13 @@ export function useMoveNode() {
   return useMutation({
     mutationFn: (args: { id: string; new_parent_id: string; oldParentId?: string }) =>
       moveNode(args.id, { new_parent_id: args.new_parent_id }),
-    onSuccess: async (updated, vars) => {
+    onSuccess: (updated, vars) => {
       toast.success(`«${updated.name}» перемещён`);
 
-      // Invalidate affected queries
-      await queryClient.invalidateQueries({ queryKey: qk.node(updated.id) });
-      await queryClient.invalidateQueries({ queryKey: ["tree"], exact: false });
-
-      // Refetch both old and new parent's children to update UI immediately
-      const oldParentId = vars.oldParentId ?? updated.parent_id;
-      if (oldParentId) {
-        await queryClient.refetchQueries({
-          queryKey: ["children", oldParentId],
-          exact: false,
-        });
-      }
-      await queryClient.refetchQueries({
-        queryKey: ["children", vars.new_parent_id],
-        exact: false,
-      });
-
-      // Refetch tree to update sidebar
-      await queryClient.refetchQueries({ queryKey: ["tree"], exact: false });
+      const oldParentId = vars.oldParentId;
+      const affectedParents = [oldParentId, vars.new_parent_id].filter(Boolean) as string[];
+      invalidateTreeAndChildren(queryClient, affectedParents);
+      void queryClient.invalidateQueries({ queryKey: qk.node(updated.id) });
     },
     onError: (err) => toast.error(errMessage(err, "Не удалось переместить")),
   });

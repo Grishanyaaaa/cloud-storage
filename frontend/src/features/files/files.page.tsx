@@ -6,9 +6,11 @@ import { AuthGate } from "@/components/common/AuthGate";
 import { AppShell } from "@/components/layout/AppShell";
 import { Breadcrumbs } from "./Breadcrumbs";
 import { FileTable } from "./FileTable";
+import { FileToolbar } from "./FileToolbar";
 import { NewFolderDialog } from "./dialogs/NewFolderDialog";
 import { useChildren, useTree } from "./useFilesData";
 import { useUploadActions } from "./upload/useUploadActions";
+import { useFileFilters, useFilteredItems } from "./useFileFilters";
 
 export function FilesPage() {
   return (
@@ -24,9 +26,10 @@ function FilesPageInner() {
   const tree = useTree();
   const children = useChildren(folderId);
   const upload = useUploadActions(folderId);
+  const filters = useFileFilters();
 
-  // Debug: log folderId to verify it updates
-  console.log("[FilesPage] Current folderId:", folderId);
+  const allItems = children.data?.items ?? [];
+  const filteredItems = useFilteredItems(allItems, filters);
 
   return (
     <AppShell>
@@ -44,11 +47,24 @@ function FilesPageInner() {
             </Button>
           </div>
         </header>
+        <FileToolbar
+          filters={filters}
+          totalCount={allItems.length}
+          filteredCount={filteredItems.length}
+        />
         <upload.DropZone>
           <FileTable
-            items={children.data?.items ?? []}
+            items={filteredItems}
             isLoading={children.isLoading}
             isError={children.isError}
+            emptyMessage={
+              filters.search || filters.kindFilter !== "all"
+                ? "Ничего не найдено. Попробуйте изменить фильтры."
+                : undefined
+            }
+            sortField={filters.sortField}
+            sortDir={filters.sortDir}
+            onSort={filters.setSort}
           />
         </upload.DropZone>
       </div>
