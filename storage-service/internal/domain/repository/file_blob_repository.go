@@ -20,6 +20,10 @@ type FileBlobRepository interface {
 	// Returns domainerr.ErrFileBlobNotFound if not exists.
 	GetByNodeID(ctx context.Context, nodeID valueobject.NodeID) (*entity.FileBlob, error)
 
+	// GetByNodeIDs returns blobs for multiple file nodes in a single query.
+	// Missing blobs are silently omitted from the result map.
+	GetByNodeIDs(ctx context.Context, nodeIDs []valueobject.NodeID) (map[valueobject.NodeID]*entity.FileBlob, error)
+
 	// Update updates an existing blob (status / size / checksum / expires_at).
 	Update(ctx context.Context, b *entity.FileBlob) error
 

@@ -67,6 +67,35 @@ func (r *FileBlobRepositoryPg) GetByNodeID(ctx context.Context, nodeID valueobje
 	return r.scanRow(row)
 }
 
+func (r *FileBlobRepositoryPg) GetByNodeIDs(ctx context.Context, nodeIDs []valueobject.NodeID) (map[valueobject.NodeID]*entity.FileBlob, error) {
+	if len(nodeIDs) == 0 {
+		return make(map[valueobject.NodeID]*entity.FileBlob), nil
+	}
+	ids := make([]uuid.UUID, len(nodeIDs))
+	for i, nid := range nodeIDs {
+		ids[i] = nid.Value()
+	}
+	const q = `SELECT ` + fileBlobColumns + ` FROM file_blobs WHERE node_id = ANY($1)`
+	rows, err := r.pool.Query(ctx, q, ids)
+	if err != nil {
+		return nil, fmt.Errorf("get blobs by node ids: %w", err)
+	}
+	defer rows.Close()
+
+	result := make(map[valueobject.NodeID]*entity.FileBlob, len(nodeIDs))
+	for rows.Next() {
+		blob, err := r.scanRow(rows)
+		if err != nil {
+			return nil, err
+		}
+		result[blob.NodeID()] = blob
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate blobs: %w", err)
+	}
+	return result, nil
+}
+
 func (r *FileBlobRepositoryPg) Update(ctx context.Context, b *entity.FileBlob) error {
 	return r.update(ctx, r.pool, b)
 }
