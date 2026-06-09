@@ -83,7 +83,7 @@ export function MoveDialog({ node, open, onOpenChange }: Props) {
             onClick={() => {
               if (!selectedId) return;
               move.mutate(
-                { id: node.id, new_parent_id: selectedId },
+                { id: node.id, new_parent_id: selectedId, oldParentId: node.parent_id ?? undefined },
                 { onSuccess: () => onOpenChange(false) },
               );
             }}

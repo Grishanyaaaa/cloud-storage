@@ -71,11 +71,13 @@ export function AIModal() {
   const exec = useMutation({
     mutationFn: (id: string) => executeCommand(id),
     onMutate: (id) => setState({ phase: "executing", id }),
-    onSuccess: (cmd) => {
+    onSuccess: async (cmd) => {
       setState({ phase: "done", cmd });
-      // Coarse cache invalidation — many ops touched the tree.
-      void queryClient.invalidateQueries({ queryKey: ["tree"], exact: false });
-      void queryClient.invalidateQueries({ queryKey: ["children"], exact: false });
+      // Aggressively invalidate and refetch all tree/children queries
+      await queryClient.invalidateQueries({ queryKey: ["tree"] });
+      await queryClient.invalidateQueries({ queryKey: ["children"] });
+      // Force refetch to ensure UI updates immediately
+      await queryClient.refetchQueries({ queryKey: ["tree"] });
       toast.success("Операции выполнены");
     },
     onError: (err) => {

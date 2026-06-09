@@ -264,7 +264,7 @@ WHERE id = $1`
 	// depth = depth + delta
 	delta := n.Depth() - oldPath.Depth()
 	const updDescendants = `UPDATE nodes
-SET path = $1 || substring(path FROM $4),
+SET path = $1 || substring(path FROM $4::int),
     depth = depth + $5,
     updated_at = $6
 WHERE path LIKE $2 AND id <> $3`
